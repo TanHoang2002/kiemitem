@@ -2,6 +2,7 @@ from typing import TYPE_CHECKING
 
 from PyQt6.QtWidgets import QCheckBox, QGroupBox, QLineEdit, QListWidget, QMessageBox, QPushButton, QSpinBox, QWidget
 
+from src.i18n import tr
 from src.settings.widgets import (
     IgnoreScrollWheelComboBox,
     MultiSegmentedControl,
@@ -38,10 +39,14 @@ class ConfigResetMixin:
         tab_name = current_item.text()
         msg = QMessageBox()
         msg.setIcon(QMessageBox.Icon.Question)
-        msg.setWindowTitle("Reset Settings")
-        msg.setText(f"Would you like to reset only the '{tab_name}' settings or all settings to defaults?")
-        btn_tab = msg.addButton(f"Reset {tab_name}", QMessageBox.ButtonRole.ActionRole)
-        btn_all = msg.addButton("Reset All Tabs", QMessageBox.ButtonRole.ActionRole)
+        msg.setWindowTitle(tr("Reset Settings"))
+        msg.setText(
+            tr("Would you like to reset only the '{tab_name}' settings or all settings to defaults?").format(
+                tab_name=tab_name
+            )
+        )
+        btn_tab = msg.addButton(tr("Reset {tab_name}").format(tab_name=tab_name), QMessageBox.ButtonRole.ActionRole)
+        btn_all = msg.addButton(tr("Reset All Tabs"), QMessageBox.ButtonRole.ActionRole)
         msg.addButton(QMessageBox.StandardButton.Cancel)
         msg.exec()
         clicked = msg.clickedButton()
@@ -54,7 +59,7 @@ class ConfigResetMixin:
         if confirm:
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Icon.Warning)
-            msg.setText("This will reset ALL custom values in your params.ini. Are you sure?")
+            msg.setText(tr("This will reset ALL custom values in your params.ini. Are you sure?"))
             msg.setStandardButtons(QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)
             if msg.exec() != QMessageBox.StandardButton.Ok:
                 return
@@ -106,6 +111,6 @@ class ConfigResetMixin:
                 parameter_value_widget.setText(str(config_value))
 
     def _setup_reset_button(self) -> QPushButton:
-        reset_button = QPushButton("Reset to defaults")
+        reset_button = QPushButton(tr("Reset to defaults"))
         reset_button.clicked.connect(self.reset_button_click)
         return reset_button

@@ -17,3 +17,14 @@ def test_advanced_options_reject_duplicate_hotkeys() -> None:
 def test_advanced_options_accept_fast_vision_coordinates() -> None:
     model = AdvancedOptionsModel(fast_vision_mode_coordinates="12,34")
     assert model.fast_vision_mode_coordinates == (12, 34)
+
+
+def test_advanced_options_default_capture_hotkeys_are_f2_and_f4() -> None:
+    model = AdvancedOptionsModel()
+    assert model.capture_single == "f2"
+    assert model.capture_stash == "f4"
+
+
+def test_advanced_options_reject_duplicate_capture_hotkeys() -> None:
+    with pytest.raises(ValidationError, match="unique"):
+        AdvancedOptionsModel(capture_single="f5", capture_stash="f5")

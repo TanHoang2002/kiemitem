@@ -4,6 +4,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QComboBox, QDialog, QFormLayout, QHBoxLayout, QLabel, QPushButton, QSpinBox, QVBoxLayout
 
 from src.game_data import MAX_POWER
+from src.i18n import tr
 
 if TYPE_CHECKING:
     from PyQt6.QtGui import QWheelEvent
@@ -44,17 +45,17 @@ class _SpinDialog(QDialog):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle(self.title)
+        self.setWindowTitle(tr(self.title))
         self.setFixedSize(250, 150)
         form = QFormLayout()
         self.spinBox = IgnoreScrollWheelSpinBox()
         self.spinBox.setRange(self.minimum, self.maximum)
         self.spinBox.setValue(self.default)
-        form.addRow(QLabel(self.label), self.spinBox)
+        form.addRow(QLabel(tr(self.label)), self.spinBox)
         buttons = QHBoxLayout()
-        self.okButton = QPushButton("OK")
+        self.okButton = QPushButton(tr("OK"))
         self.okButton.clicked.connect(self.accept)
-        self.cancelButton = QPushButton("Cancel")
+        self.cancelButton = QPushButton(tr("Cancel"))
         self.cancelButton.clicked.connect(self.reject)
         buttons.addWidget(self.okButton)
         buttons.addWidget(self.cancelButton)

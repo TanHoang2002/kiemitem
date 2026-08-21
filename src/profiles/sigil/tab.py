@@ -13,6 +13,7 @@ from PyQt6.QtWidgets import (
 )
 
 from src.game_data import SigilRules
+from src.i18n import tr
 from src.profiles import SigilConditionModel, SigilFilterModel, SigilPriority
 from src.profiles.editor.container import Container
 from src.profiles.editor.dialogs import IgnoreScrollWheelComboBox
@@ -46,13 +47,13 @@ class SigilsTab(QWidget):
     def create_button_layout(self):
         btn_layout = QHBoxLayout()
 
-        add_sigil_btn = QPushButton("Add Sigil")
+        add_sigil_btn = QPushButton(tr("Add Sigil"))
         add_sigil_btn.clicked.connect(self.create_sigil)
 
-        remove_whitelist_sigil_btn = QPushButton("Remove Whitelist Sigil")
+        remove_whitelist_sigil_btn = QPushButton(tr("Remove Whitelist Sigil"))
         remove_whitelist_sigil_btn.clicked.connect(lambda: self.remove_sigil())
 
-        remove_blacklist_sigil_btn = QPushButton("Remove Blacklist Sigil")
+        remove_blacklist_sigil_btn = QPushButton(tr("Remove Blacklist Sigil"))
         remove_blacklist_sigil_btn.clicked.connect(lambda: self.remove_sigil(blacklist=True))
 
         btn_layout.addWidget(add_sigil_btn)
@@ -72,7 +73,7 @@ class SigilsTab(QWidget):
         self.priority_combobox.setCurrentText(self.sigil_model.priority)
         self.priority_combobox.setMaximumWidth(150)
         self.priority_combobox.currentIndexChanged.connect(self.update_priority)
-        self.general_form.addRow("Priority:", self.priority_combobox)
+        self.general_form.addRow(tr("Priority:"), self.priority_combobox)
 
         self.rarity_line_edit = QLineEdit()
         self.rarity_line_edit.setReadOnly(True)
@@ -84,13 +85,13 @@ class SigilsTab(QWidget):
         edit_rarities_btn.clicked.connect(self.edit_rarities)
         rarity_layout.addWidget(edit_rarities_btn)
         rarity_layout.addStretch()
-        self.general_form.addRow("Rarities:", rarity_layout)
+        self.general_form.addRow(tr("Rarities:"), rarity_layout)
 
         self.main_layout.addLayout(self.general_form)
 
     def create_containers(self):
         # Blacklist
-        self.blacklist_container = Container("Blacklist")
+        self.blacklist_container = Container(tr("Blacklist"))
         self.blacklist_layout = QVBoxLayout(self.blacklist_container.content_widget)
         self.blacklist_sigils = []
 
@@ -99,7 +100,7 @@ class SigilsTab(QWidget):
             self.blacklist_sigils.append(sigil_condition.name)
 
         # Whitelist
-        self.whitelist_container = Container("Whitelist")
+        self.whitelist_container = Container(tr("Whitelist"))
         self.whitelist_layout = QVBoxLayout(self.whitelist_container.content_widget)
         self.whitelist_sigils = []
 
@@ -176,11 +177,15 @@ class SigilsTab(QWidget):
         new_name = sigil_widget.sigil.name
         old_name = sigil_widget.old_sigil_name
         if whitelist and new_name in self.whitelist_sigils:
-            QMessageBox.warning(self, "Warning", "Sigil already exist in whitelist. You can modify the existing one.")
+            QMessageBox.warning(
+                self, tr("Warning"), tr("Sigil already exist in whitelist. You can modify the existing one.")
+            )
             sigil_widget.revert_sigil_dungeon()
             return
         if not whitelist and new_name in self.blacklist_sigils:
-            QMessageBox.warning(self, "Warning", "Sigil already exist in blacklist. You can modify the existing one.")
+            QMessageBox.warning(
+                self, tr("Warning"), tr("Sigil already exist in blacklist. You can modify the existing one.")
+            )
             sigil_widget.revert_sigil_dungeon()
             return
         if whitelist and old_name in self.whitelist_sigils:

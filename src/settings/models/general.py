@@ -48,6 +48,31 @@ class GeneralModel(_IniBaseModel):
         title="Auto-use Temper Manuals",
         json_schema_extra={CATEGORY_KEY: SettingsCategory.AUTOMATION},
     )
+    capture_mode: bool = Field(
+        default=True,
+        description=(
+            "GiaoIT V1: when enabled, every item read by the loot filter is also written as a JSON payload "
+            "plus a cropped tooltip PNG to ~/.giaoit/captures/pending/. Always on — set GIAOIT_DISABLED=1 "
+            "env var to kill-switch in emergencies."
+        ),
+        title="Capture Mode (GiaoIT V1)",
+        json_schema_extra={HIDE_FROM_GUI_KEY: "True", CATEGORY_KEY: SettingsCategory.ADVANCED},
+    )
+    capture_auto_scan: bool = Field(
+        default=False,
+        description=(
+            "GiaoIT: when enabled, hovering an item in-game captures it automatically (no F2 needed). "
+            "Items already captured in this session are skipped via item_hash dedup. Turn off when farming."
+        ),
+        title="Auto-Scan on Hover (GiaoIT)",
+        json_schema_extra={CATEGORY_KEY: SettingsCategory.ADVANCED},
+    )
+    current_character: str = Field(
+        default="default_char",
+        description="GiaoIT: the active character name/ID used when scanning inventory items.",
+        title="Current Character (GiaoIT)",
+        json_schema_extra={CATEGORY_KEY: SettingsCategory.ADVANCED},
+    )
     browser: BrowserType = Field(
         default=BrowserType.chrome,
         description="Which browser to use to get builds",
@@ -126,14 +151,10 @@ class GeneralModel(_IniBaseModel):
         json_schema_extra={CATEGORY_KEY: SettingsCategory.LOOT},
     )
     language: str = Field(
-        default="enUS",
-        description="Do not change. Only English is supported at this time",
+        default="viVN",
+        description="UI language. Restart d4lf after changing. Game data stays English (matches the in-game text).",
         title="Language",
-        json_schema_extra={
-            HIDE_FROM_GUI_KEY: "True",
-            LIVE_RELOAD_GROUP_KEY: "language",
-            CATEGORY_KEY: SettingsCategory.SYSTEM,
-        },
+        json_schema_extra={LIVE_RELOAD_GROUP_KEY: "restart_app", CATEGORY_KEY: SettingsCategory.SYSTEM},
     )
     mark_as_favorite: bool = Field(
         default=True,
@@ -176,6 +197,31 @@ class GeneralModel(_IniBaseModel):
         description="Whether to run vision mode on startup or not",
         title="Auto-Start Vision Mode",
         json_schema_extra={CATEGORY_KEY: SettingsCategory.AUTOMATION},
+    )
+    scan_hover_delay_factor: tuple[float, float] = Field(
+        default=(0.6, 1.0),
+        description=(
+            "Speed of cursor movement while scanning items. Lower = faster. Default (0.6, 1.0) moves the cursor "
+            "almost instantly between adjacent slots. Raise to (1.0, 1.5) only if you see missed TTS reads."
+        ),
+        title="Scan Hover Speed",
+        json_schema_extra={CATEGORY_KEY: SettingsCategory.ADVANCED},
+    )
+    scan_post_hover_sleep: float = Field(
+        default=0.15,
+        description=(
+            "Seconds to wait after hovering an item before reading TTS + capturing the tooltip image. "
+            "Higher gives the game more time to fully render the tooltip (helps magic/unique items where "
+            "F4 currently fails while F2 succeeds); lower speeds up the scan. Default 0.15s balances both."
+        ),
+        title="Scan Post-Hover Wait",
+        json_schema_extra={CATEGORY_KEY: SettingsCategory.ADVANCED},
+    )
+    scan_inter_tab_sleep: float = Field(
+        default=0.15,
+        description="Seconds to wait after switching stash tabs before scanning. Lower = faster.",
+        title="Scan Inter-Tab Wait",
+        json_schema_extra={CATEGORY_KEY: SettingsCategory.ADVANCED},
     )
     theme: ThemeType = Field(
         default=ThemeType.dark,
@@ -251,7 +297,7 @@ class GeneralModel(_IniBaseModel):
     @field_validator("language")
     @classmethod
     def language_must_exist(cls, v: str) -> str:
-        if v != "enUS":
+        if v not in {"enUS", "viVN"}:
             msg = "language not supported"
             raise ValueError(msg)
         return v
@@ -261,6 +307,33 @@ class GeneralModel(_IniBaseModel):
     def font_size_in_range(cls, v: int) -> int:
         if not 10 <= v <= 20:
             msg = "Font size must be between 10 and 20, inclusive"
+            raise ValueError(msg)
+        return v
+
+    @field_validator("scan_hover_delay_factor", mode="before")
+    @classmethod
+    def convert_scan_hover_delay_factor(cls, v: object) -> tuple[float, float]:
+        if isinstance(v, tuple) and len(v) == 2 and all(isinstance(x, int | float) and x > 0 for x in v):
+            return float(v[0]), float(v[1])
+        if isinstance(v, str):
+            cleaned = v.strip().strip("()")
+            parts = [p.strip() for p in cleaned.replace(",", " ").split() if p.strip()]
+            if len(parts) != 2:
+                msg = "Expected two numbers for scan_hover_delay_factor."
+                raise ValueError(msg)
+            values = [float(p) for p in parts]
+            if any(x <= 0 for x in values):
+                msg = "scan_hover_delay_factor values must be > 0"
+                raise ValueError(msg)
+            return values[0], values[1]
+        msg = "scan_hover_delay_factor must be a tuple of two positive numbers or a string like '1.0, 1.5'"
+        raise ValueError(msg)
+
+    @field_validator("scan_post_hover_sleep", "scan_inter_tab_sleep")
+    @classmethod
+    def scan_sleep_non_negative(cls, v: float) -> float:
+        if v < 0:
+            msg = "scan sleep must be >= 0"
             raise ValueError(msg)
         return v
 

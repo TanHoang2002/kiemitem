@@ -16,6 +16,7 @@ from PyQt6.QtWidgets import (
 )
 
 from src.desktop.widgets import CheckmarkCheckBox
+from src.i18n import tr
 from src.settings.binding import validate_hotkey
 
 if TYPE_CHECKING:
@@ -198,11 +199,13 @@ class QHotkeyWidget(QWidget):
 class HotkeyListenerDialog(QDialog):
     def __init__(self, parent=None, hotkey=""):
         super().__init__(parent)
-        self.setWindowTitle("Set Hotkey")
+        self.setWindowTitle(tr("Set Hotkey"))
         self.setModal(True)
         self.setFixedSize(320, 180)
         main_layout = QVBoxLayout(self)
-        self.label = QLabel("Press the key or combination of keys you\nwant to use as a hotkey, then click save.", self)
+        self.label = QLabel(
+            tr("Press the key or combination of keys you\nwant to use as a hotkey, then click save."), self
+        )
         self.label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         main_layout.addWidget(self.label)
         self.hotkey_label = QLabel(hotkey, self)
@@ -210,11 +213,11 @@ class HotkeyListenerDialog(QDialog):
         self.hotkey_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         main_layout.addWidget(self.hotkey_label)
         self.button_layout = QHBoxLayout()
-        self.save_button = QPushButton("Save", self)
+        self.save_button = QPushButton(tr("Save"), self)
         self.save_button.setEnabled(False)
         self.save_button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.save_button.clicked.connect(self.accept)
-        self.cancel_button = QPushButton("Cancel", self)
+        self.cancel_button = QPushButton(tr("Cancel"), self)
         self.cancel_button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.cancel_button.clicked.connect(self.reject)
         self.button_layout.addStretch()

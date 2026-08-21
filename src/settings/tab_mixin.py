@@ -19,6 +19,7 @@ from PyQt6.QtWidgets import (
 )
 
 from src.desktop.widgets import CheckmarkCheckBox
+from src.i18n import tr
 from src.settings import GeneralModel, MoveItemsType
 from src.settings.widgets import (
     IgnoreScrollWheelComboBox,
@@ -101,10 +102,10 @@ class ConfigTabMixin:
     def _prompt_restart_for_vision_mode_change(self) -> None:
         msg = QMessageBox(cast("QWidget", self))
         msg.setIcon(QMessageBox.Icon.Question)
-        msg.setWindowTitle("Restart required")
-        msg.setText("Vision mode changes require restarting d4lf. Restart now?")
-        restart_button = msg.addButton("Restart now", QMessageBox.ButtonRole.AcceptRole)
-        msg.addButton("Later", QMessageBox.ButtonRole.RejectRole)
+        msg.setWindowTitle(tr("Restart required"))
+        msg.setText(tr("Vision mode changes require restarting d4lf. Restart now?"))
+        restart_button = msg.addButton(tr("Restart now"), QMessageBox.ButtonRole.AcceptRole)
+        msg.addButton(tr("Later"), QMessageBox.ButtonRole.RejectRole)
         msg.exec()
         if msg.clickedButton() is restart_button:
             self._restart_application()
@@ -119,8 +120,8 @@ class ConfigTabMixin:
         except OSError:
             msg = QMessageBox(cast("QWidget", self))
             msg.setIcon(QMessageBox.Icon.Critical)
-            msg.setWindowTitle("Restart failed")
-            msg.setText("d4lf could not be restarted automatically. Please restart it manually.")
+            msg.setWindowTitle(tr("Restart failed"))
+            msg.setText(tr("d4lf could not be restarted automatically. Please restart it manually."))
             msg.setStandardButtons(QMessageBox.StandardButton.Ok)
             msg.exec()
             return
@@ -143,11 +144,11 @@ class ConfigTabMixin:
             message = f"There was an error setting {key} to {value}. See error below.\n\n"
             # Only reset the widget if the field is NOT an enum
             if method_to_reset_value and key != "theme":
-                message = message + "Your value has been reset to its previous version.\n\n"
+                message = message + tr("Your value has been reset to its previous version.") + "\n\n"
                 method_to_reset_value(result.previous_value)
             message = message + str(result.validation_error)
             msg.setText(message)
-            msg.setWindowTitle("Error validating value")
+            msg.setWindowTitle(tr("Error validating value"))
             msg.setStandardButtons(QMessageBox.StandardButton.Ok)
             msg.exec()
             return False
@@ -191,9 +192,9 @@ class ConfigTabMixin:
             parameter_value_widget = SegmentedControl(["6", "7"], str(config_value), on_tabs_changed)
         elif config_key in {"move_to_inv_item_type", "move_to_stash_item_type"}:
             items_map = {
-                "Favorites": MoveItemsType.favorites,
-                "Junk": MoveItemsType.junk,
-                "Unmarked": MoveItemsType.unmarked,
+                tr("Favorites"): MoveItemsType.favorites,
+                tr("Junk"): MoveItemsType.junk,
+                tr("Unmarked"): MoveItemsType.unmarked,
             }
 
             def on_move_changed(val_str):

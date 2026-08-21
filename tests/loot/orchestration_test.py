@@ -8,6 +8,7 @@ def test_loot_filter_processes_stash_tabs_before_inventory(monkeypatch):
     class Settings:
         class General:
             check_chest_tabs = [2, 4]
+            scan_inter_tab_sleep = 0.0
 
         general = General()
 

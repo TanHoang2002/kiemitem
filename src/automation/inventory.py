@@ -6,7 +6,7 @@ import numpy as np
 from src.automation.menu import Menu
 from src.automation.mouse import Mouse
 from src.perception import capture, crop, get_center, search, to_grid, window_to_monitor
-from src.settings import get_ui_coordinates
+from src.settings import get_settings, get_ui_coordinates
 
 
 @dataclass
@@ -90,5 +90,7 @@ class InventoryBase(Menu):
         x, y, width, height = item.bounding_box
         Mouse.move(*window_to_monitor([x - width / 2, y + height / 2]), randomize=15)
 
-    def hover_item_with_delay(self, item: ItemSlot, delay_factor: tuple[float, float] = (2, 3)):
+    def hover_item_with_delay(self, item: ItemSlot, delay_factor: tuple[float, float] | None = None):
+        if delay_factor is None:
+            delay_factor = get_settings().general.scan_hover_delay_factor
         Mouse.move(*window_to_monitor(item.center), randomize=15, delay_factor=delay_factor)

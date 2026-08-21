@@ -17,6 +17,7 @@ from src.app.dashboard.drag import ActivityProfileDragMixin, DragHandleButton
 from src.app.dashboard.profiles import ActivityProfileRowsMixin
 from src.desktop.activity import ANSIConsoleWidget
 from src.desktop.widgets import CheckmarkCheckBox
+from src.i18n import tr
 from src.settings import IS_HOTKEY_KEY, get_settings
 
 __all__ = ["ActivityLogWidget", "DragHandleButton"]
@@ -42,14 +43,16 @@ class ActivityLogWidget(ActivityProfileRowsMixin, ActivityProfileDragMixin, Acti
         profile_section = QVBoxLayout()
         profile_section.setSpacing(10)
 
-        profile_hdr = QLabel("ACTIVE PROFILES")
+        profile_hdr = QLabel(tr("ACTIVE PROFILES"))
         profile_hdr.setStyleSheet("font-weight: bold; color: #888; letter-spacing: 1px;")
         profile_section.addWidget(profile_hdr)
 
         # Inline help text instead of a tooltip for better discovery and clarity
         profile_help = QLabel(
-            "Toggle profiles to enable them. Drag <b>⠿</b> to set priority; "
-            "the top profile determines affix highlighting."
+            tr(
+                "Toggle profiles to enable them. Drag <b>⠿</b> to set priority; "
+                "the top profile determines affix highlighting."
+            )
         )
         profile_help.setWordWrap(True)
         profile_help.setObjectName("profile-help")
@@ -76,14 +79,14 @@ class ActivityLogWidget(ActivityProfileRowsMixin, ActivityProfileDragMixin, Acti
 
         # Search bar for profiles
         self.profile_search_input = QLineEdit()
-        self.profile_search_input.setPlaceholderText("🔍 Filter profiles...")
+        self.profile_search_input.setPlaceholderText("🔍 " + tr("Filter profiles..."))
         self.profile_search_input.textChanged.connect(self._filter_profiles)
 
         # Bulk selection buttons
         btn_layout = QHBoxLayout()
         btn_layout.setSpacing(10)
-        self.enable_all_btn = QPushButton("Enable All")
-        self.disable_all_btn = QPushButton("Disable All")
+        self.enable_all_btn = QPushButton(tr("Enable All"))
+        self.disable_all_btn = QPushButton(tr("Disable All"))
         self.enable_all_btn.clicked.connect(self._select_all)
         self.disable_all_btn.clicked.connect(self._deselect_all)
         btn_layout.addWidget(self.enable_all_btn)
@@ -97,7 +100,7 @@ class ActivityLogWidget(ActivityProfileRowsMixin, ActivityProfileDragMixin, Acti
 
         # -- RIGHT: HOTKEY GRID --
         hotkey_section = QVBoxLayout()
-        hotkey_hdr = QLabel("KEYBOARD SHORTCUTS")
+        hotkey_hdr = QLabel(tr("KEYBOARD SHORTCUTS"))
         hotkey_hdr.setStyleSheet("font-weight: bold; color: #888; letter-spacing: 1px;")
         hotkey_section.addWidget(hotkey_hdr)
 
@@ -132,18 +135,18 @@ class ActivityLogWidget(ActivityProfileRowsMixin, ActivityProfileDragMixin, Acti
         self.main_layout.addWidget(self.splitter, stretch=1)
 
         # Hidden button that appears when the log viewer is fully collapsed
-        self.show_log_btn = QPushButton("Show Activity Log")
+        self.show_log_btn = QPushButton(tr("Show Activity Log"))
         self.show_log_btn.setObjectName("secondary")
         self.show_log_btn.setVisible(False)
         self.main_layout.addWidget(self.show_log_btn)
 
         # === ACTION BAR ===
         action_layout = QHBoxLayout()
-        self.import_btn = QPushButton("Import Profile")
+        self.import_btn = QPushButton(tr("Import Profile"))
         self.import_btn.setObjectName("primary")
-        self.settings_btn = QPushButton("Settings")
+        self.settings_btn = QPushButton(tr("Settings"))
 
-        self.minimize_to_tray_cb = CheckmarkCheckBox("Minimize to Tray")
+        self.minimize_to_tray_cb = CheckmarkCheckBox(tr("Minimize to Tray"))
         self.minimize_to_tray_cb.setObjectName("switch")
 
         for btn in [self.import_btn, self.settings_btn]:
@@ -155,6 +158,17 @@ class ActivityLogWidget(ActivityProfileRowsMixin, ActivityProfileDragMixin, Acti
         action_layout.addWidget(self.minimize_to_tray_cb)
 
         self.main_layout.addLayout(action_layout)
+
+        # === AFFIX SEARCH PANEL (embedded in dashboard) ===
+        # Read-only search: user enters affix + Greater + min/max + AND/OR,
+        # tool scans stash/inventory and lists matching items. No profile
+        # saved, no junk/favorite marking.
+        from src.giaoit.affix_search import AffixSearchPanel
+
+        self.affix_search_panel = AffixSearchPanel(self)
+        self.affix_search_panel.setMaximumHeight(400)
+        self.main_layout.addWidget(self.affix_search_panel)
+
         self._connect_signals()
         self.refresh_profiles()
 
@@ -177,14 +191,22 @@ class ActivityLogWidget(ActivityProfileRowsMixin, ActivityProfileDragMixin, Acti
         properties = schema.get("properties", {})
 
         hotkey_items = []
-        # Filter for keys that control the app (Advanced section) and are tagged as hotkeys
+        # Filter for keys that control the app (Advanced section) and are tagged as hotkeys.
+        # GiaoIT: skip info_overlay (F6) and toggle_paragon_overlay (F10) — overlays disabled.
+        hidden_hotkeys = {"info_overlay", "toggle_paragon_overlay"}
         for key, field in opts.model_fields.items():
+            if key in hidden_hotkeys:
+                continue
             meta = field.json_schema_extra or {}
             if meta.get(IS_HOTKEY_KEY) == "True":
                 val = getattr(opts, key)
                 prop_meta = properties.get(key, {})
-                label = prop_meta.get("title") or key.replace("_", " ").title()
-                hotkey_items.append((str(val), label))
+                raw_label = prop_meta.get("title") or key.replace("_", " ").title()
+                hotkey_items.append((str(val), tr(raw_label)))
+
+        # Add F6 Scan Currency hotkey to the GUI list (except in stripped test mock options)
+        if hasattr(opts, "model_fields") and "vision_mode_only" in opts.model_fields:
+            hotkey_items.append(("F6", tr("Scan Currency")))
 
         for i, (key_val, label) in enumerate(hotkey_items):
             row, col = divmod(i, 2)

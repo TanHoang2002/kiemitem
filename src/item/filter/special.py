@@ -2,6 +2,7 @@ import logging
 from typing import TYPE_CHECKING
 
 from src.game_data import ItemRarity, SigilRules
+from src.item.filter.equipment import _format_affix_detail
 from src.item.models import FilterResult, MatchedFilter
 from src.profiles import CharmFilterModel, SigilPriority
 from src.settings import CosmeticFilterType, get_settings
@@ -106,9 +107,10 @@ class FilterSpecialMixin:
                     if not seal_or_charm.set or seal_or_charm.set not in filter_spec.set:
                         continue
                     matched_set = True
+                match_detail = ", ".join(_format_affix_detail(a) for a in matched_affixes) or "(no affix detail)"
                 LOGGER.info(
-                    f"{seal_or_charm.original_name} -- Matched {profile_name}.{section_name}.{filter_name}: "
-                    f"{[affix.name for affix in matched_affixes]}"
+                    f"{seal_or_charm.original_name} -- Matched {profile_name}.{section_name}.{filter_name} "
+                    f"({len(matched_affixes)} affixes): {match_detail}"
                 )
                 if matched_aspect or matched_set:
                     LOGGER.info(

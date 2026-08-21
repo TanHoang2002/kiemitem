@@ -2,6 +2,7 @@ from typing import TYPE_CHECKING
 
 from PyQt6.QtWidgets import QDialog, QMessageBox, QPushButton, QTabWidget, QToolBar, QVBoxLayout, QWidget
 
+from src.i18n import tr
 from src.profiles.affix.dialogs import CreateItem
 from src.profiles.affix.group import AffixGroupEditor
 from src.profiles.editor.dialogs import DeleteItem, MinGreaterDialog, MinPercentDialog, MinPowerDialog
@@ -45,7 +46,11 @@ class AffixesTab(QWidget):
             for item_name in affix_group.root:
                 if item_name in self.item_names:
                     QMessageBox.warning(
-                        self, "Warning", f"Item name already exist please rename {item_name} in the profile file."
+                        self,
+                        tr("Warning"),
+                        tr("Item name already exist please rename {item_name} in the profile file.").format(
+                            item_name=item_name
+                        ),
                     )
                     continue
                 group = AffixGroupEditor(affix_group)
@@ -53,16 +58,16 @@ class AffixesTab(QWidget):
                 self.tab_widget.addTab(group, item_name)
 
         add_item_button = QPushButton()
-        add_item_button.setText("Create Item")
+        add_item_button.setText(tr("Create Item"))
         add_item_button.clicked.connect(self.add_item_type)
 
         remove_item_button = QPushButton()
-        remove_item_button.setText("Remove Item")
+        remove_item_button.setText(tr("Remove Item"))
         remove_item_button.clicked.connect(self.remove_item_type)
 
-        set_all_min_greater_affix_button = QPushButton("Set All Min GAs (Excludes Auto Synced Items)")
-        convert_all_to_min_percent_button = QPushButton("Convert All To Min %")
-        set_all_min_power_button = QPushButton("Set all minPower")
+        set_all_min_greater_affix_button = QPushButton(tr("Set All Min GAs (Excludes Auto Synced Items)"))
+        convert_all_to_min_percent_button = QPushButton(tr("Convert All To Min %"))
+        set_all_min_power_button = QPushButton(tr("Set all minPower"))
         set_all_min_greater_affix_button.clicked.connect(self.set_all_min_greater_affix)
         convert_all_to_min_percent_button.clicked.connect(self.convert_all_to_min_percent_of_affix)
         set_all_min_power_button.clicked.connect(self.set_all_min_power)
@@ -77,7 +82,7 @@ class AffixesTab(QWidget):
         self.main_layout.addWidget(self.tab_widget)
 
     def show_message(self, text):
-        QMessageBox.information(self, "Info", text)
+        QMessageBox.information(self, tr("Info"), text)
 
     def add_item_type(self):
         dialog = CreateItem(self.item_names, self)

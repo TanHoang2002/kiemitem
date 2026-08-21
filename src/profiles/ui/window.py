@@ -7,6 +7,7 @@ from PyQt6.QtCore import QPoint, QSettings, QSize, Qt, QTimer
 from PyQt6.QtGui import QCloseEvent, QIcon
 from PyQt6.QtWidgets import QMainWindow
 
+from src.i18n import tr
 from src.profiles.editor.profile.tab import ProfileTab
 
 BASE_DIR = (
@@ -33,7 +34,7 @@ class ProfileEditorWindow(QMainWindow):
             self.setWindowIcon(QIcon(str(ICON_PATH)))
 
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, on=True)
-        self.setWindowTitle("Profile Editor")
+        self.setWindowTitle(tr("Profile Editor"))
 
         self.resize(self.settings.value("size", QSize(650, 800)))
         self.move(self.settings.value("pos", QPoint(0, 0)))

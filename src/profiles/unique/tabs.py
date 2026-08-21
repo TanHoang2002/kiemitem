@@ -4,6 +4,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QFormLayout, QFrame, QGroupBox, QLineEdit, QScrollArea, QToolButton, QVBoxLayout, QWidget
 
 from src.game_data import MAX_POWER
+from src.i18n import tr
 from src.profiles import GlobalUniqueModel
 from src.profiles.editor.dialogs import IgnoreScrollWheelSpinBox
 from src.profiles.editor.tabs import TabGroupWidget
@@ -37,35 +38,35 @@ class UniqueWidget(QWidget):
 
     def create_general_groupbox(self):
         self.general_groupbox = QGroupBox()
-        self.general_groupbox.setTitle("Global Unique Rule")
+        self.general_groupbox.setTitle(tr("Global Unique Rule"))
         self.general_form = QFormLayout()
 
         self.profile_alias = QLineEdit()
         self.profile_alias.setMaximumWidth(300)
         self.profile_alias.setText(self.unique_model.profile_alias)
         self.profile_alias.textChanged.connect(self.update_profile_alias)
-        self.general_form.addRow("Profile Alias:", self.profile_alias)
+        self.general_form.addRow(tr("Profile Alias:"), self.profile_alias)
 
         self.min_power = IgnoreScrollWheelSpinBox()
         self.min_power.setRange(0, MAX_POWER)
         self.min_power.setValue(self.unique_model.min_power)
         self.min_power.setMaximumWidth(150)
         self.min_power.valueChanged.connect(self.update_min_power)
-        self.general_form.addRow("Minimum Power:", self.min_power)
+        self.general_form.addRow(tr("Minimum Power:"), self.min_power)
 
         self.min_greater = IgnoreScrollWheelSpinBox()
         self.min_greater.setRange(0, 4)
         self.min_greater.setValue(self.unique_model.min_greater_affix_count)
         self.min_greater.setMaximumWidth(150)
         self.min_greater.valueChanged.connect(self.update_min_greater_affix)
-        self.general_form.addRow("Min Greater Affixes:", self.min_greater)
+        self.general_form.addRow(tr("Min Greater Affixes:"), self.min_greater)
 
         self.min_percent = IgnoreScrollWheelSpinBox()
         self.min_percent.setRange(0, 100)
         self.min_percent.setValue(self.unique_model.min_percent_of_aspect)
         self.min_percent.setMaximumWidth(150)
         self.min_percent.valueChanged.connect(self.update_min_percent)
-        self.general_form.addRow("Min Percent of Aspect:", self.min_percent)
+        self.general_form.addRow(tr("Min Percent of Aspect:"), self.min_percent)
 
         self.general_groupbox.setLayout(self.general_form)
         self.content_layout.addWidget(self.general_groupbox)
@@ -104,7 +105,7 @@ class UniquesTab(TabGroupWidget[GlobalUniqueModel]):
 
     @override
     def tab_label(self, model: GlobalUniqueModel, index: int) -> str:
-        return f"Unique Rule {index}"
+        return tr("Unique Rule {index}").format(index=index)
 
     @override
     def create_model(self) -> GlobalUniqueModel:
@@ -112,13 +113,13 @@ class UniquesTab(TabGroupWidget[GlobalUniqueModel]):
 
     @override
     def add_button_text(self) -> str:
-        return "Create Rule"
+        return tr("Create Rule")
 
     @override
     def remove_button_text(self) -> str:
-        return "Remove Rule"
+        return tr("Remove Rule")
 
     @override
     def after_models_changed(self) -> None:
         for i in range(self.tab_widget.count()):
-            self.tab_widget.setTabText(i, f"Unique Rule {i}")
+            self.tab_widget.setTabText(i, tr("Unique Rule {index}").format(index=i))

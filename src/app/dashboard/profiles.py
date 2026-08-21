@@ -9,6 +9,7 @@ from PyQt6.QtWidgets import QHBoxLayout, QLabel, QMessageBox, QPushButton, QVBox
 
 from src.app.dashboard.drag import DragHandleButton
 from src.desktop.widgets import CheckmarkCheckBox
+from src.i18n import tr
 from src.profiles import ProfileDocumentError, ProfileDocumentStore
 
 if TYPE_CHECKING:
@@ -68,14 +69,14 @@ class ActivityProfileRowsMixin:
                 header_hbox.addWidget(cb)
                 header_hbox.addStretch()
 
-                edit_btn = self._create_row_btn("Edit")
-                edit_btn.setToolTip("Edit Profile")
+                edit_btn = self._create_row_btn(tr("Edit"))
+                edit_btn.setToolTip(tr("Edit Profile"))
                 edit_btn.clicked.connect(lambda _, n=name: self._edit_profile(n))
                 header_hbox.addWidget(edit_btn)
 
-                delete_btn = self._create_row_btn("Delete")
+                delete_btn = self._create_row_btn(tr("Delete"))
                 delete_btn.setObjectName("delete-profile-btn")
-                delete_btn.setToolTip("Delete Profile")
+                delete_btn.setToolTip(tr("Delete Profile"))
                 delete_btn.clicked.connect(lambda _, n=name: self._delete_profile(n))
                 header_hbox.addWidget(delete_btn)
 
@@ -93,7 +94,7 @@ class ActivityProfileRowsMixin:
                 self._rows[name] = row_widget
 
         if not self._rows:
-            empty_lbl = QLabel("No Profiles found. Please import a profile below.")
+            empty_lbl = QLabel(tr("No Profiles found. Please import a profile below."))
             empty_lbl.setStyleSheet("color: #888; font-style: italic; padding: 20px;")
             empty_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
             self.profile_layout.addWidget(empty_lbl)
@@ -123,8 +124,8 @@ class ActivityProfileRowsMixin:
     def _delete_profile(self: Any, name: str):
         msg = QMessageBox(self)
         msg.setIcon(QMessageBox.Icon.Warning)
-        msg.setWindowTitle("Delete Profile")
-        msg.setText(f"Are you sure you want to permanently delete the profile '{name}'?")
+        msg.setWindowTitle(tr("Delete Profile"))
+        msg.setText(tr("Are you sure you want to permanently delete the profile '{name}'?").format(name=name))
         msg.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
 
         if msg.exec() == QMessageBox.StandardButton.Yes:
@@ -148,7 +149,7 @@ class ActivityProfileRowsMixin:
             stat = path.stat()
             mtime = datetime.datetime.fromtimestamp(stat.st_mtime, tz=datetime.UTC).strftime("%Y-%m-%d %H:%M")
             model = ProfileDocumentStore.default().load(path).profile
-            summary = [f"Last Modified: {mtime}"]
+            summary = [tr("Last Modified:") + f" {mtime}"]
 
             if model.affixes:
                 types = set()
@@ -160,20 +161,20 @@ class ActivityProfileRowsMixin:
                             else:
                                 types.add(str(it))
                 if types:
-                    summary.append(f"📦 Items: {', '.join(sorted(types))}")
-                summary.append(f"🔍 Affix Filters: {len(model.affixes)}")
+                    summary.append("📦 " + tr("Items:") + f" {', '.join(sorted(types))}")
+                summary.append("🔍 " + tr("Affix Filters:") + f" {len(model.affixes)}")
 
             if model.aspect_upgrades:
-                summary.append(f"✨ Aspect Upgrades: {len(model.aspect_upgrades)}")
+                summary.append("✨ " + tr("Aspect Upgrades:") + f" {len(model.aspect_upgrades)}")
             if model.global_uniques:
-                summary.append(f"💎 Global Uniques: {len(model.global_uniques)}")
+                summary.append("💎 " + tr("Global Uniques:") + f" {len(model.global_uniques)}")
             if model.sigils:
-                summary.append("📜 Sigils: Included")
+                summary.append("📜 " + tr("Sigils: Included"))
             if model.tributes:
-                summary.append("🏆 Tributes: Included")
+                summary.append("🏆 " + tr("Tributes: Included"))
             if model.paragon:
-                summary.append("🔱 Paragon Overlay: Data Found")
+                summary.append("🔱 " + tr("Paragon Overlay: Data Found"))
 
             return "\n".join(summary)
         except OSError, ProfileDocumentError:
-            return f"Path: {path}\n(Could not parse profile details)"
+            return f"{path}\n" + tr("(Could not parse profile details)")

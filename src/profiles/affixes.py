@@ -1,4 +1,5 @@
 import sys
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -10,6 +11,8 @@ class AffixAspectFilterModel(BaseModel):
     model_config = ConfigDict(extra="forbid")
     name: str
     value: float | None = None
+    min_value: float | None = None
+    max_value: float | None = None
 
     @model_validator(mode="before")
     @classmethod
@@ -30,6 +33,13 @@ class AffixAspectFilterModel(BaseModel):
             return result
         msg = "must be str or list"
         raise ValueError(msg)
+
+    @model_validator(mode="after")
+    def min_value_le_max_value(self) -> AffixAspectFilterModel:
+        if self.min_value is not None and self.max_value is not None and self.min_value > self.max_value:
+            msg = f"min_value ({self.min_value}) must be <= max_value ({self.max_value})"
+            raise ValueError(msg)
+        return self
 
 
 class AffixFilterModel(AffixAspectFilterModel):
@@ -66,6 +76,7 @@ class AffixFilterModel(AffixAspectFilterModel):
 class AffixFilterCountModel(BaseModel):
     model_config = ConfigDict(extra="forbid", validate_by_name=True, validate_by_alias=True)
     count: list[AffixFilterModel] = []
+    match_mode: Literal["all", "any"] = "all"
     max_count: int = Field(default=sys.maxsize, alias="maxCount")
     min_count: int = Field(default=0, alias="minCount")
 
@@ -77,10 +88,16 @@ class AffixFilterCountModel(BaseModel):
     @model_validator(mode="after")
     def model_validator(self) -> AffixFilterCountModel:
         # If minCount and maxCount are not set, we assume that the lengths of the count list is the only thing that matters.
-        # To not show up in the model.dict() we need to remove them from the model_fields_set property
+        # To not show up in the model.dict() we need to remove them from the model_fields_set property.
+        # Exception: when match_mode == "any" (OR semantics), the default min_count is 1 —
+        # the user wants "at least one of these affixes" rather than "all of them".
         if "min_count" not in self.model_fields_set and "max_count" not in self.model_fields_set:
-            self.min_count = len(self.count)
-            self.max_count = len(self.count)
+            if self.match_mode == "any":
+                self.min_count = 1
+                self.max_count = len(self.count)
+            else:
+                self.min_count = len(self.count)
+                self.max_count = len(self.count)
             self.model_fields_set.remove("min_count")
             self.model_fields_set.remove("max_count")
         if self.min_count > self.max_count:

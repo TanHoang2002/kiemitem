@@ -12,6 +12,11 @@ from src.perception.backend.core import load_backend
 
 CONNECTED = False
 LAST_ITEM: list[str] = []
+# Monotonic counter bumped every time the publisher flushes a fresh item.
+# Lets callers detect "TTS emitted again" even when the payload content is
+# identical to the previous emission (e.g. hovering two copies of the same
+# item in a row).
+LAST_ITEM_VERSION: int = 0
 _DATA_QUEUE = queue.Queue(maxsize=100)
 _backend = load_backend()
 LOGGER = logging.getLogger(__name__)
@@ -75,8 +80,9 @@ class Publisher:
             start = find_item_start(local_cache)
             if start is None:
                 continue
-            global LAST_ITEM
+            global LAST_ITEM, LAST_ITEM_VERSION
             LAST_ITEM = local_cache[start:]
+            LAST_ITEM_VERSION += 1
             self.publish_item(LAST_ITEM)
             local_cache = []
 

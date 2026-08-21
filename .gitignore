@@ -34,3 +34,6 @@ main.build/
 main.dist/
 main.onefile-build/
 venv
+
+.claude/
+tts/.tools/

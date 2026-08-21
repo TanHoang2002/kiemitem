@@ -1,5 +1,6 @@
 from typing import TYPE_CHECKING, Protocol, override, runtime_checkable
 
+from src.i18n import tr
 from src.profiles.aspect.dialogs import AddAspectUpgrade
 from src.profiles.editor.rule_list import RuleListTab
 
@@ -22,14 +23,14 @@ class AspectUpgradesTab(RuleListTab[str]):
 
     @override
     def description_text(self) -> str:
-        return (
+        return tr(
             "Add any legendary aspects you'd like to have favorited if an upgrade is found. "
             "See the readme on AspectUpgrades for more information."
         )
 
     @override
     def add_actions(self):
-        return [("Add Aspect", lambda: AddAspectUpgrade(self.aspect_upgrades))]
+        return [(tr("Add Aspect"), lambda: AddAspectUpgrade(self.aspect_upgrades))]
 
     @override
     def on_add_accepted(self, dialog: QDialog) -> str:

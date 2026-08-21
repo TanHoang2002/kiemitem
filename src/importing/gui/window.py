@@ -19,6 +19,7 @@ from PyQt6.QtWidgets import (
 
 from src.desktop.activity import QtLogHandler
 from src.desktop.widgets import CheckmarkCheckBox, set_accent_color
+from src.i18n import tr
 from src.importing.contracts import (
     DEFAULT_FILENAME_PARTS,
     FilenamePart,
@@ -79,7 +80,7 @@ class ImporterWindow(QMainWindow):
         self.is_generating = False
         self._closing = False
         self._active_import_session: ImportSession | None = None
-        self.setWindowTitle("Profile Importer - d2core / Maxroll / D4Builds / Mobalytics / InfinityBuilds")
+        self.setWindowTitle(tr("Profile Importer - d2core / Maxroll / D4Builds / Mobalytics / InfinityBuilds"))
         self.setMinimumSize(700, 600)
         self.resize(self.settings.value("size", QSize(700, 600)))
         self.move(self.settings.value("pos", QPoint(100, 100)))
@@ -99,11 +100,11 @@ class ImporterWindow(QMainWindow):
         self._build_url_row(layout)
         build_filename_row(self, layout)
         self._build_options(layout)
-        layout.addWidget(QLabel("Log:"))
+        layout.addWidget(QLabel(tr("Log:")))
         self.log_output = QTextEdit()
         self.log_output.setReadOnly(True)
         layout.addWidget(self.log_output)
-        layout.addWidget(QLabel("Instructions:"))
+        layout.addWidget(QLabel(tr("Instructions:")))
         instructions = QTextEdit()
         instructions.setText(INSTRUCTIONS_TEXT.format(user_dir=get_settings().user_dir))
         instructions.setReadOnly(True)
@@ -113,11 +114,11 @@ class ImporterWindow(QMainWindow):
 
     def _build_url_row(self, layout: QVBoxLayout):
         row = QHBoxLayout()
-        row.addWidget(QLabel("URL:"))
+        row.addWidget(QLabel(tr("URL:")))
         self.input_box = QLineEdit()
         self.input_box.textChanged.connect(self._update_generate_button_state)
         row.addWidget(self.input_box)
-        self.generate_button = QPushButton("Generate")
+        self.generate_button = QPushButton(tr("Generate"))
         self.generate_button.setEnabled(False)
         self.generate_button.clicked.connect(self._generate_button_click)
         row.addWidget(self.generate_button)
@@ -136,9 +137,9 @@ class ImporterWindow(QMainWindow):
         return tuple(part for part in DEFAULT_FILENAME_PARTS if self.filename_part_actions[part].isChecked())
 
     def _update_filename_parts_summary(self) -> None:
-        labels = [FILENAME_PART_LABELS[part] for part in self._selected_filename_parts()]
+        labels = [tr(FILENAME_PART_LABELS[part]) for part in self._selected_filename_parts()]
         self.filename_parts_summary_label.setText(
-            f"Default file name: {'_'.join(labels) + '.yaml' if labels else 'none'}"
+            tr("Default file name: {value}").format(value="_".join(labels) + ".yaml" if labels else tr("none"))
         )
 
     @staticmethod
@@ -194,7 +195,7 @@ class ImporterWindow(QMainWindow):
         if url_ready and not filename_ready:
             self.generate_button.setToolTip(GENERATE_DISABLED_FILENAME_PARTS_TOOLTIP)
         elif not url_ready:
-            self.generate_button.setToolTip("Enter a URL to generate a profile.")
+            self.generate_button.setToolTip(tr("Enter a URL to generate a profile."))
         else:
             self.generate_button.setToolTip("")
 
@@ -232,7 +233,7 @@ class ImporterWindow(QMainWindow):
             )
         self.is_generating = True
         self.generate_button.setEnabled(False)
-        self.generate_button.setText("Generating...")
+        self.generate_button.setText(tr("Generating..."))
         THREADPOOL.start(worker)
 
     def _open_import_session(self, url: str, multi_build: bool) -> ImportSession | None:
@@ -253,7 +254,7 @@ class ImporterWindow(QMainWindow):
             return
         self._release_import_session()
         self.is_generating = False
-        self.generate_button.setText("Generate")
+        self.generate_button.setText(tr("Generate"))
         self.filename_input_box.clear()
         self._update_generate_button_state()
         self.import_completed.emit()
@@ -269,7 +270,7 @@ class ImporterWindow(QMainWindow):
             self._on_worker_finished()
             return
         LOGGER.info(f"User selected {len(selected_ids)} variant(s). Generating...")
-        self.generate_button.setText("Saving...")
+        self.generate_button.setText(tr("Saving..."))
         selection = VariantSelection.from_ids(tuple(selected_ids))
         request = self._current_request.with_variant_selection(selection)
         worker = ImportWorker(request, self._on_persist_finished, self._active_import_session)

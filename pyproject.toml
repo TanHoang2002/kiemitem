@@ -33,6 +33,8 @@ dynamic = ["version"]
 
 [dependency-groups]
 dev = [
+  "fastapi",
+  "prek",
   "pyinstaller",
   "pytest",
   "pytest-cov",
@@ -40,10 +42,12 @@ dev = [
   "pytest-mock",
   "pytest-pythonpath",
   "pytest-xdist",
+  "python-multipart",
   "ruff",
   "ty",
   "types-pywin32",
   "typing-extensions",
+  "uvicorn",
 ]
 
 [build-system]

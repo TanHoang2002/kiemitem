@@ -80,6 +80,28 @@ class FilterMatchingMixin:
         result = []
         for count_group in expected_affixes:
             best_matches = self._match_count_group(count_group, item_affixes)
+
+            # OR semantics: only one of the listed affixes needs to match.
+            # ``min_count`` is forced to 1 by the AffixFilterCountModel validator
+            # when match_mode == "any", so we accept the best match if any exists.
+            if getattr(count_group, "match_mode", "all") == "any":
+                if not best_matches:
+                    return []
+                # GA requirement check still applies to the matched affix.
+                want_greater_affixes = [a for a in count_group.count if getattr(a, "want_greater", False)]
+                want_greater_count = len(want_greater_affixes)
+                if want_greater_count > 0 and min_greater_affix_count > 0:
+                    flagged_ga_count = sum(
+                        1
+                        for expected, matched in best_matches
+                        if expected.want_greater and matched.type == AffixType.greater
+                    )
+                    if flagged_ga_count < min_greater_affix_count:
+                        return []
+                result.extend(matched for _, matched in best_matches)
+                continue
+
+            # Default AND semantics: need at least ``min_count`` matches.
             if len(best_matches) < count_group.min_count:
                 return []
 
@@ -152,6 +174,15 @@ class FilterMatchingMixin:
             if item_aspect.value is None:  # fixed aspect values are always at max
                 return bool(is_fixed_aspect_value)
             if not self._match_item_value_threshold(expected_aspect.value, item_aspect):
+                return False
+        # Min/max value range (extends the single-threshold ``value`` check
+        # above with an explicit upper bound). Backward compatible: when both
+        # are None the range check is skipped.
+        if expected_aspect.min_value is not None:
+            if item_aspect.value is None or item_aspect.value < expected_aspect.min_value:
+                return False
+        if expected_aspect.max_value is not None:
+            if item_aspect.value is None or item_aspect.value > expected_aspect.max_value:
                 return False
         expected_affix_percent = getattr(expected_aspect, "min_percent_of_affix", 0)
         if expected_affix_percent:

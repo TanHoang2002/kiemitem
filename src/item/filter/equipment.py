@@ -2,7 +2,7 @@ import logging
 from typing import TYPE_CHECKING
 
 from src.item import ASPECT_UPGRADES_LABEL
-from src.item.data.affix import AffixType
+from src.item.data.affix import Affix, AffixType
 from src.item.models import FilterResult, MatchedFilter
 from src.settings import AspectFilterType, UnfilteredUniquesType, get_settings
 
@@ -11,6 +11,32 @@ if TYPE_CHECKING:
     from src.item.models import Item
 
 LOGGER = logging.getLogger(__name__)
+
+
+def _format_num(value: float | None) -> str:
+    if value is None:
+        return "?"
+    if isinstance(value, float) and value.is_integer():
+        return str(int(value))
+    return str(value)
+
+
+def _format_affix_detail(affix: Affix) -> str:
+    """One-line human-readable summary: 'name = value (range min-max) [TYPE]'."""
+    parts: list[str] = [affix.name or "(unknown)"]
+    if affix.value is not None:
+        parts.append(f"= {_format_num(affix.value)}")
+    if affix.min_value is not None or affix.max_value is not None:
+        parts.append(f"(range {_format_num(affix.min_value)}-{_format_num(affix.max_value)})")
+    if affix.type == AffixType.greater:
+        parts.append("[GA]")
+    elif affix.type == AffixType.tempered:
+        parts.append("[tempered]")
+    elif affix.type == AffixType.rerolled:
+        parts.append("[rerolled]")
+    elif affix.type == AffixType.inherent:
+        parts.append("[inherent]")
+    return " ".join(parts)
 
 
 class FilterEquipmentMixin:
@@ -50,10 +76,10 @@ class FilterEquipmentMixin:
                     if not matched_inherents:
                         continue
                 all_matches = matched_affixes + matched_inherents
-                match_details = [
-                    f"{affix.name} (GA)" if affix.type == AffixType.greater else affix.name for affix in all_matches
-                ]
-                LOGGER.info(f"{item.original_name} -- Matched {profile_name}.Affixes.{filter_name}: {match_details}")
+                match_details = ", ".join(_format_affix_detail(affix) for affix in all_matches)
+                LOGGER.info(
+                    f"{item.original_name} -- Matched {profile_name}.Affixes.{filter_name} ({len(all_matches)} affixes): {match_details}"
+                )
                 if filter_spec.unique_aspect:  # show the matched unique aspect
                     LOGGER.info(f"{item.original_name} -- Matched {profile_name}.Affixes.{filter_name}: Unique aspect")
                 res.keep = True
@@ -96,7 +122,18 @@ class FilterEquipmentMixin:
                     continue
                 if not self._match_item_roll_is_in_percent_range(filter_item.min_percent_of_aspect, item.aspect):
                     continue
-                LOGGER.info(f"{item.original_name} -- Matched {profile_name}.GlobalUniques: {item.aspect.name}")
+                aspect_detail = item.aspect.name or "(unnamed aspect)"
+                if item.aspect.value is not None:
+                    aspect_detail = f"{aspect_detail} = {_format_num(item.aspect.value)}"
+                    if item.aspect.min_value is not None or item.aspect.max_value is not None:
+                        aspect_detail += (
+                            f" (range {_format_num(item.aspect.min_value)}-{_format_num(item.aspect.max_value)})"
+                        )
+                affix_detail = ", ".join(_format_affix_detail(a) for a in item.affixes)
+                LOGGER.info(
+                    f"{item.original_name} -- Matched {profile_name}.GlobalUniques: aspect={aspect_detail}"
+                    + (f"; affixes: {affix_detail}" if affix_detail else "")
+                )
                 res.keep = True
                 matched_full_name = f"{profile_name}.{item.aspect.name}"
                 if filter_item.profile_alias:

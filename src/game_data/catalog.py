@@ -5,7 +5,7 @@ import threading
 from typing import Self, TypeGuard, cast
 
 from src.game_data.item_type import ItemType
-from src.settings import BASE_DIR, get_settings
+from src.settings import BASE_DIR
 
 LOGGER = logging.getLogger(__name__)
 GAME_CATALOG_LOCK = threading.RLock()
@@ -63,7 +63,10 @@ class GameCatalog:
             return cast("Self", cls._instance)
 
     def load_data(self) -> None:
-        language_dir = pathlib.Path(BASE_DIR / f"assets/lang/{get_settings().general.language}")
+        # Game catalog always uses English because Diablo IV must run in English
+        # for the TTS / OCR pipeline. The ``general.language`` setting is only
+        # for the UI translation layer.
+        language_dir = pathlib.Path(BASE_DIR / "assets/lang/enUS")
         self.affix_dict = _load_string_map(language_dir / "affixes.json")
         self.seal_affix_dict = _load_string_map(language_dir / "seals_affixes.json")
         self.charm_affix_dict = _load_string_map(language_dir / "charms_affixes.json")

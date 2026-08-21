@@ -6,6 +6,7 @@ from dataclasses import dataclass
 
 from src import automation
 from src.game_data import ItemType, is_consumable, is_non_sigil_mapping, is_socketable
+from src.i18n import tr
 from src.item import SeasonalAttribute
 from src.perception import abs_window_to_monitor
 from src.settings import get_settings
@@ -64,7 +65,7 @@ def mark_as_junk() -> None:
 
 
 def mark_as_favorite() -> None:
-    LOGGER.info("Mark as favorite")
+    LOGGER.info(tr("Mark as favorite"))
     automation.send_hotkey("space")
     time.sleep(0.17)
     automation.send_hotkey("space")

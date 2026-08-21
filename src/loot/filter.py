@@ -5,10 +5,13 @@ from typing import TYPE_CHECKING
 import src.perception
 from src import automation
 from src.game_data import ItemRarity, ItemType, is_sigil
+from src.giaoit import CaptureBundle, CapturedItem, is_capture_enabled
+from src.giaoit.writer import write_capture
 from src.item import ASPECT_UPGRADES_LABEL, AffixType
 from src.item.filter import Filter
+from src.item.models import Item
 from src.loot.colors import drop_item_from_inventory, is_ignored_item, mark_as_favorite, mark_as_junk, reset_item_status
-from src.perception import capture, screenshot
+from src.perception import capture, find_descr_with_diagnostics, screenshot
 from src.settings import ItemRefreshType, UnfilteredUniquesType, get_settings
 
 if TYPE_CHECKING:
@@ -46,7 +49,7 @@ def check_items(
         if item.is_junk or item.is_fav:
             continue
         inv.hover_item_with_delay(item)
-        time.sleep(0.1)
+        time.sleep(get_settings().general.scan_post_hover_sleep)
         img = capture()
         item_descr = None
         retry_count = 0
@@ -62,6 +65,8 @@ def check_items(
 
         if item_descr is None:
             continue
+
+        _maybe_capture_item(item_descr, img, item.center)
 
         # Hardcoded filters
         if is_ignored_item(item_descr):
@@ -123,3 +128,18 @@ def check_items(
         LOGGER.warning(
             f"{num_of_items_with_all_ga} out of {num_of_affixed_items_checked} non-junk rarity items checked had all greater affixes. You are either exceptionally lucky or have not enabled Advanced Tooltip Information in Options > Gameplay"
         )
+
+
+def _maybe_capture_item(item_descr: Item, img, anchor: tuple[int, int]) -> None:
+    """Side-channel capture for GiaoIT V1 — never breaks the filter flow."""
+    if not is_capture_enabled():
+        return
+    try:
+        detection = find_descr_with_diagnostics(img, anchor)
+        cropped = detection.cropped_descr if detection.found else None
+        bundle = CaptureBundle(
+            kind="single", items=[CapturedItem(item=item_descr, image=cropped)], source="filter_check_items"
+        )
+        write_capture(bundle)
+    except Exception:
+        LOGGER.exception("GiaoIT capture failed for item at %s; continuing filter", anchor)

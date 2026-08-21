@@ -1,0 +1,187 @@
+"""GiaoIT V1 receiver stub — FastAPI app.
+
+Endpoints:
+  POST /items              multipart: payload=JSON string, account_id=string, images=PNG files
+  GET  /items/{capture_id}
+  GET  /health
+  GET  /stats
+"""
+
+import json
+import time
+from pathlib import Path
+from typing import Annotated
+
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi.responses import JSONResponse
+
+from receiver.storage import Storage, get_store
+
+SCHEMA = "giaoit.capture.v1"
+START_TIME = time.monotonic()
+
+app = FastAPI(title="GiaoIT V1 Receiver Stub", version="0.1.0")
+
+
+def _storage() -> Storage:
+    return get_store()
+
+
+@app.get("/health")
+def health() -> dict[str, object]:
+    return {"ok": True, "uptime_s": round(time.monotonic() - START_TIME, 3)}
+
+
+@app.get("/stats")
+def stats() -> dict[str, object]:
+    return {"records": _storage().count()}
+
+
+@app.post("/items")
+async def post_items(
+    payload: Annotated[str, Form()],
+    account_id: Annotated[str, Form()],
+    images: Annotated[list[UploadFile], File()] = [],
+) -> JSONResponse:
+    try:
+        parsed = json.loads(payload)
+    except json.JSONDecodeError as exc:
+        raise HTTPException(status_code=400, detail=f"invalid payload JSON: {exc}") from exc
+
+    if not isinstance(parsed, dict):
+        raise HTTPException(status_code=400, detail="payload must be a JSON object")
+
+    if parsed.get("schema") != SCHEMA:
+        raise HTTPException(status_code=400, detail=f"unsupported schema: {parsed.get('schema')!r}")
+
+    capture_id = parsed.get("capture_id")
+    if not isinstance(capture_id, str) or not capture_id:
+        raise HTTPException(status_code=400, detail="missing capture_id")
+
+    # Persist uploaded images to ~/.giaoit/received/<capture_id>/<filename>
+    record, deduped_by_id, deduped_by_hash = _storage().put(capture_id, parsed, account_id)
+    if not deduped_by_id and not deduped_by_hash:
+        _persist_images(capture_id, images)
+
+    deduped = deduped_by_id or deduped_by_hash
+    status_code = 200 if deduped else 201
+    return JSONResponse(
+        status_code=status_code,
+        content={
+            "ok": True,
+            "id": record["capture_id"],
+            "capture_id": record["capture_id"],
+            "deduped": deduped,
+            "deduped_by_capture_id": deduped_by_id,
+            "deduped_by_hash": deduped_by_hash,
+            "items_count": record["items_count"],
+        },
+    )
+
+
+@app.get("/items/{capture_id}")
+def get_item(capture_id: str) -> JSONResponse:
+    record = _storage().get(capture_id)
+    if record is None:
+        raise HTTPException(status_code=404, detail="not found")
+    return JSONResponse(status_code=200, content=record)
+
+
+@app.get("/warehouse")
+def get_warehouse_summary() -> dict[str, Any]:
+    """Get the latest currency warehouse state grouped by account_id."""
+    import re
+    from collections import Counter
+    from datetime import datetime
+    
+    storage = _storage()
+    # Group records by account_id, keeping the latest one by received_at
+    latest_records = {}
+    with storage._lock:
+        for record in storage._records.values():
+            if record.get("kind") != "stash":
+                continue
+            acc_id = record.get("account_id")
+            if not acc_id:
+                continue
+            received_at = record.get("received_at", "")
+            
+            if acc_id not in latest_records or received_at > latest_records[acc_id].get("received_at", ""):
+                latest_records[acc_id] = record
+                
+    summary = {}
+    for acc_id, record in latest_records.items():
+        payload_data = record.get("payload", {})
+        items_list = payload_data.get("items", [])
+        counts = Counter()
+        
+        for item_entry in items_list:
+            item = item_entry.get("item", {})
+            orig_name = str(item.get("original_name", "")).lower()
+            name = str(item.get("name", "")).lower()
+            
+            # Extract stack size
+            match = re.search(r"\((\d+)\)", orig_name)
+            quantity = int(match.group(1)) if match else 1
+            
+            # Match categories
+            if "greater lair" in orig_name or "greater lair" in name:
+                counts["Greater Lair Key"] += quantity
+            elif "lair" in orig_name or "lair" in name:
+                if "greater" not in orig_name and "superior" not in orig_name:
+                    counts["Lair Key"] += quantity
+            elif "superior" in orig_name or "superior" in name:
+                counts["Superior Lair Key"] += quantity
+            elif "root" in orig_name or "root" in name:
+                counts["Corrupted Roots"] += quantity
+            elif "crux" in orig_name or "crux" in name:
+                counts["Crux of the False Prophet"] += quantity
+            elif "grand" in orig_name or "grand" in name:
+                gem_type = next((g for g in ["skull", "ruby", "sapphire", "topaz", "emerald", "diamond", "amethyst"] if g in orig_name), "other")
+                counts[f"Grand {gem_type.capitalize()}"] += quantity
+            elif ("flawless" in orig_name and "horadric" in orig_name) or ("flawless" in name and "horadric" in name):
+                gem_type = next((g for g in ["skull", "ruby", "sapphire", "topaz", "emerald", "diamond", "amethyst"] if g in orig_name), "other")
+                counts[f"Flawless {gem_type.capitalize()}"] += quantity
+                
+        # Format the time
+        received_at_str = record.get("received_at", "")
+        try:
+            # simple ISO parsing
+            dt_str = received_at_str.replace("Z", "+00:00")
+            # handle milliseconds if present
+            if "." in dt_str:
+                dt = datetime.strptime(dt_str.split(".")[0], "%Y-%m-%dT%H:%M:%S")
+            else:
+                dt = datetime.fromisoformat(dt_str)
+            last_updated = dt.strftime("%Y-%m-%d %H:%M:%S UTC")
+        except Exception:
+            last_updated = received_at_str
+            
+        summary[acc_id] = {
+            "last_updated": last_updated,
+            "currencies": dict(counts)
+        }
+        
+    return summary
+
+
+@app.get("/warehouse/history")
+def get_warehouse_history() -> list[dict[str, Any]]:
+    """Get the transaction history list of warehouse updates."""
+    return _storage().get_history()
+
+
+def _persist_images(capture_id: str, images: list[UploadFile]) -> None:
+    if not images:
+        return
+    target_dir = Path.home() / ".giaoit" / "received" / capture_id
+    target_dir.mkdir(parents=True, exist_ok=True)
+    for image in images:
+        filename = Path(image.filename or "image.png").name
+        if not filename.endswith(".png"):
+            continue
+        target = target_dir / filename
+        try:
+            target.write_bytes(image.file.read())
+        except OSError:
+            pass

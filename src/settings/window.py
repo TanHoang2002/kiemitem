@@ -7,6 +7,7 @@ from PyQt6.QtCore import QPoint, QSettings, QSize, Qt
 from PyQt6.QtGui import QCloseEvent, QIcon
 from PyQt6.QtWidgets import QMainWindow
 
+from src.i18n import tr
 from src.settings.tab import ConfigTab
 
 BASE_DIR = Path(sys.executable).parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parents[2]
@@ -28,7 +29,7 @@ class ConfigWindow(QMainWindow):
         self.theme_changed_callback = theme_changed_callback
         self.settings = QSettings("d4lf", "config")
 
-        self.setWindowTitle("Settings")
+        self.setWindowTitle(tr("Settings"))
 
         self.resize(self.settings.value("size", QSize(650, 800)))
         self.move(self.settings.value("pos", QPoint(0, 0)))

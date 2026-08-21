@@ -4,6 +4,7 @@ import typing
 
 import pytest
 
+from src.i18n import set_language_override
 from src.settings import BrowserType, get_settings
 
 if typing.TYPE_CHECKING:
@@ -77,3 +78,14 @@ def mock_ini_loader(mocker: MockerFixture):
     mocker.patch.object(settings.general, "browser", BrowserType.chrome)
     mocker.patch.object(settings.general, "full_dump", False)
     return settings
+
+
+@pytest.fixture(autouse=True)
+def _force_english_ui_for_tests():
+    """Force English UI language for all tests so assertions on widget text match
+    the English source strings in the codebase. The viVN catalog is exercised
+    separately in tests/i18n/.
+    """
+    set_language_override("enUS")
+    yield
+    set_language_override(None)

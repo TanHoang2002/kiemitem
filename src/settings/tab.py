@@ -15,6 +15,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from src.i18n import tr
 from src.settings import CATEGORY_KEY, CATEGORY_ORDER, HIDE_FROM_GUI_KEY, IS_HOTKEY_KEY, SettingsCategory
 from src.settings.reset import ConfigResetMixin
 from src.settings.store import SettingsStore
@@ -40,7 +41,7 @@ class ConfigTab(ConfigTabMixin, ConfigResetMixin, QWidget):
         search_hbox = QHBoxLayout(search_container)
         search_hbox.setContentsMargins(10, 0, 10, 0)
         self.search_input = QLineEdit()
-        self.search_input.setPlaceholderText("🔍 Search settings...")
+        self.search_input.setPlaceholderText("🔍 " + tr("Search settings..."))
         self.search_input.textChanged.connect(self._filter_settings)
         search_hbox.addWidget(self.search_input)
         layout.addWidget(search_container)
@@ -113,11 +114,11 @@ class ConfigTab(ConfigTabMixin, ConfigResetMixin, QWidget):
             layout = page.findChild(QVBoxLayout)
             # Determine a nice title for the group box
             if cat_name == SettingsCategory.HOTKEYS:
-                gb_title = "Key Bindings"
+                gb_title = tr("Key Bindings")
             elif cat_name == SettingsCategory.ADVANCED:
-                gb_title = "Technical Settings"
+                gb_title = tr("Technical Settings")
             else:
-                gb_title = str(cat_name).replace("&", "&&")
+                gb_title = tr(str(cat_name).replace("&", "&&"))
             gb = QGroupBox(gb_title)
             grid = QGridLayout(gb)
             grid.setColumnStretch(0, 1)
@@ -145,7 +146,9 @@ class ConfigTab(ConfigTabMixin, ConfigResetMixin, QWidget):
         meta = model.model_json_schema()["properties"].get(key, {})
         if meta.get(HIDE_FROM_GUI_KEY):
             return
-        human_label = meta.get("title") or key.replace("_", " ").title()
+        raw_title = meta.get("title") or key.replace("_", " ").title()
+        human_label = tr(raw_title)
+        raw_desc = meta.get("description", "")
         label_container = QWidget()
         label_vbox = QVBoxLayout(label_container)
         label_vbox.setContentsMargins(0, 0, 10, 0)
@@ -153,7 +156,7 @@ class ConfigTab(ConfigTabMixin, ConfigResetMixin, QWidget):
         title_lbl = QLabel(human_label)
         title_lbl.setObjectName("setting-title")
         title_lbl.setWordWrap(True)
-        desc_lbl = QLabel(meta.get("description", ""))
+        desc_lbl = QLabel(tr(raw_desc))
         desc_lbl.setObjectName("description-label")
         desc_lbl.setWordWrap(True)
         label_vbox.addWidget(title_lbl)
@@ -162,4 +165,4 @@ class ConfigTab(ConfigTabMixin, ConfigResetMixin, QWidget):
         self.model_to_parameter_value_map[f"{section}.{key}"] = control
         grid.addWidget(label_container, row, 0, Qt.AlignmentFlag.AlignTop)
         grid.addWidget(control, row, 2, Qt.AlignmentFlag.AlignTop)
-        self._all_rows.append((human_label, meta.get("description", ""), label_container, control, grid.parentWidget()))
+        self._all_rows.append((human_label, tr(raw_desc), label_container, control, grid.parentWidget()))

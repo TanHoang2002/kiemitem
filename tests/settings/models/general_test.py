@@ -42,3 +42,21 @@ class TestGeneralModel:
     def test_stash_tab_count_is_limited_to_six_or_seven(self) -> None:
         with pytest.raises(ValidationError, match="must be 6 or 7"):
             GeneralModel(max_stash_tabs=8)
+
+    def test_scan_speed_defaults_are_fast_but_safe(self) -> None:
+        model = GeneralModel()
+        assert model.scan_hover_delay_factor == (0.6, 1.0)
+        assert model.scan_post_hover_sleep == 0.15
+        assert model.scan_inter_tab_sleep == 0.15
+
+    def test_scan_hover_delay_factor_parses_string_form(self) -> None:
+        model = GeneralModel(scan_hover_delay_factor="0.8, 1.2")
+        assert model.scan_hover_delay_factor == (0.8, 1.2)
+
+    def test_scan_hover_delay_factor_rejects_zero(self) -> None:
+        with pytest.raises(ValidationError, match="positive numbers"):
+            GeneralModel(scan_hover_delay_factor=(0.0, 1.5))
+
+    def test_scan_sleep_rejects_negative(self) -> None:
+        with pytest.raises(ValidationError, match="scan sleep must be >= 0"):
+            GeneralModel(scan_post_hover_sleep=-0.1)

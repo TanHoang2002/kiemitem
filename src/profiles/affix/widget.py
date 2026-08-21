@@ -60,6 +60,8 @@ class AffixWidget(QWidget):
         layout.addWidget(self.greater_checkbox)
         layout.addWidget(self.mode_combo)
         layout.addWidget(self.value_edit)
+        layout.addWidget(self.min_value_edit)
+        layout.addWidget(self.max_value_edit)
 
         self.setLayout(layout)
 
@@ -160,9 +162,28 @@ class AffixWidget(QWidget):
             self.mode_combo.setCurrentText(AFFIX_VALUE_MODE)
 
     def create_value_input(self):
+        """Create the value inputs: legacy single ``value`` + new ``min``/``max`` range.
+
+        All three are shown side-by-side. ``value`` is the legacy single-threshold
+        field (kept for backward compatibility with existing profiles).
+        ``min``/``max`` are the new range fields — when set, the filter requires
+        the affix value to fall within [min, max].
+        """
         self.value_edit = QLineEdit()
-        self.value_edit.setFixedSize(100, self.value_edit.sizeHint().height())
+        self.value_edit.setFixedSize(80, self.value_edit.sizeHint().height())
         self.value_edit.textChanged.connect(self.update_value)
+
+        self.min_value_edit = QLineEdit()
+        self.min_value_edit.setFixedSize(70, self.min_value_edit.sizeHint().height())
+        self.min_value_edit.setPlaceholderText("Min")
+        self.min_value_edit.setValidator(QDoubleValidator(self.min_value_edit))
+        self.min_value_edit.textChanged.connect(self.update_min_value)
+
+        self.max_value_edit = QLineEdit()
+        self.max_value_edit.setFixedSize(70, self.max_value_edit.sizeHint().height())
+        self.max_value_edit.setPlaceholderText("Max")
+        self.max_value_edit.setValidator(QDoubleValidator(self.max_value_edit))
+        self.max_value_edit.textChanged.connect(self.update_max_value)
 
     def update_name(self, current_text=None):
         """Update the model only when the editable combobox contains a valid affix."""
@@ -182,21 +203,53 @@ class AffixWidget(QWidget):
             self.value_edit.setPlaceholderText("Percent (0-100)")
             self.value_edit.setValidator(QIntValidator(0, 100, self.value_edit))
             display_value = "" if self.affix.min_percent_of_affix == 0 else str(self.affix.min_percent_of_affix)
+            # Min/max range disabled in percent mode.
+            self.min_value_edit.setEnabled(False)
+            self.max_value_edit.setEnabled(False)
         else:
             self.value_edit.setPlaceholderText("Value (optional)")
             self.value_edit.setValidator(QDoubleValidator(self.value_edit))
             display_value = "" if self.affix.value is None else str(self.affix.value)
+            self.min_value_edit.setEnabled(True)
+            self.max_value_edit.setEnabled(True)
 
         with QSignalBlocker(self.value_edit):
             self.value_edit.setText(display_value)
+
+        min_display = "" if getattr(self.affix, "min_value", None) is None else str(self.affix.min_value)
+        max_display = "" if getattr(self.affix, "max_value", None) is None else str(self.affix.max_value)
+        with QSignalBlocker(self.min_value_edit):
+            self.min_value_edit.setText(min_display)
+        with QSignalBlocker(self.max_value_edit):
+            self.max_value_edit.setText(max_display)
 
     def update_mode(self, current_text=None):
         mode = current_text or self.mode_combo.currentText()
         if mode == AFFIX_PERCENT_MODE:
             self.affix.value = None
+            # Range is meaningless in percent mode — clear it so it doesn't
+            # accidentally constrain the match.
+            self.affix.min_value = None
+            self.affix.max_value = None
+            with QSignalBlocker(self.min_value_edit):
+                self.min_value_edit.setText("")
+            with QSignalBlocker(self.max_value_edit):
+                self.max_value_edit.setText("")
         else:
             self.affix.min_percent_of_affix = 0
         self.refresh_value_input()
+
+    def update_min_value(self, value):
+        try:
+            self.affix.min_value = float(value) if value else None
+        except ValueError:
+            return
+
+    def update_max_value(self, value):
+        try:
+            self.affix.max_value = float(value) if value else None
+        except ValueError:
+            return
 
     def update_value(self, value):
         if self.mode_combo.currentText() == AFFIX_PERCENT_MODE:

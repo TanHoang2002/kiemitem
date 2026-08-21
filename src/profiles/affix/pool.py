@@ -49,6 +49,31 @@ class AffixPoolWidget(QWidget):
         self.max_count.setMaximumWidth(100)
         self.max_count.valueChanged.connect(self.update_max_count)
         config_layout.addWidget(self.max_count)
+        config_layout.addSpacing(150)
+
+        # Match mode toggle: AND (all affixes must match) vs OR (any affix).
+        match_mode_label = QLabel("Match:")
+        match_mode_label.setMaximumWidth(80)
+        match_mode_label.setProperty("affixHeaderLabel", True)  # ruff:ignore[boolean-positional-value-in-call]
+        self._refresh_widget_style(match_mode_label)
+        config_layout.addWidget(match_mode_label)
+
+        self.match_mode_and_btn = QPushButton("AND")
+        self.match_mode_and_btn.setCheckable(True)
+        self.match_mode_and_btn.setMaximumWidth(60)
+        self.match_mode_or_btn = QPushButton("OR")
+        self.match_mode_or_btn.setCheckable(True)
+        self.match_mode_or_btn.setMaximumWidth(60)
+        # Set initial state from model
+        is_any = getattr(self.pool, "match_mode", "all") == "any"
+        self.match_mode_and_btn.setChecked(not is_any)
+        self.match_mode_or_btn.setChecked(is_any)
+        self.match_mode_and_btn.clicked.connect(lambda: self._set_match_mode("all"))
+        self.match_mode_or_btn.clicked.connect(lambda: self._set_match_mode("any"))
+        # Exclusive group via signal blocking
+        self.match_mode_and_btn.toggled.connect(self._sync_match_mode_toggle)
+        config_layout.addWidget(self.match_mode_and_btn)
+        config_layout.addWidget(self.match_mode_or_btn)
 
         layout.addLayout(config_layout)
 
@@ -132,3 +157,19 @@ class AffixPoolWidget(QWidget):
 
     def update_max_count(self):
         self.pool.max_count = self.max_count.value()
+
+    def _set_match_mode(self, mode: str) -> None:
+        """Update the model with the new match mode (``all`` = AND, ``any`` = OR)."""
+        self.pool.match_mode = mode  # type: ignore[attr-defined]
+
+    def _sync_match_mode_toggle(self, _checked: bool) -> None:
+        """Keep AND/OR buttons mutually exclusive without a QButtonGroup."""
+        sender = self.sender()
+        if sender is self.match_mode_and_btn and self.match_mode_and_btn.isChecked():
+            self.match_mode_or_btn.setChecked(False)
+        elif sender is self.match_mode_or_btn and self.match_mode_or_btn.isChecked():
+            self.match_mode_and_btn.setChecked(False)
+        # Always ensure at least one is checked.
+        if not self.match_mode_and_btn.isChecked() and not self.match_mode_or_btn.isChecked():
+            self.match_mode_and_btn.setChecked(True)
+            self._set_match_mode("all")

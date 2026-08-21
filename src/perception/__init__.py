@@ -43,6 +43,16 @@ def latest_item_lines() -> list[str]:
     return list(_listener.LAST_ITEM)
 
 
+def latest_item_version() -> int:
+    """Monotonic counter that bumps every time the TTS pipe publishes a fresh item.
+
+    Callers use this to detect "TTS flushed again" even when the payload is
+    byte-identical to the previous emission (e.g. two adjacent slots holding
+    the same item).
+    """
+    return _listener.LAST_ITEM_VERSION
+
+
 def is_connected() -> bool:
     return _listener.CONNECTED
 
@@ -117,6 +127,7 @@ __all__ = [
     "is_connected",
     "keep_letters_and_spaces",
     "latest_item_lines",
+    "latest_item_version",
     "locate_affix_markers",
     "locate_affix_markers_with_diagnostics",
     "monitor_to_window",

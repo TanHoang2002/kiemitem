@@ -2,6 +2,7 @@ from typing import TYPE_CHECKING, override
 
 from PyQt6.QtWidgets import QCheckBox, QDialog, QLineEdit, QMessageBox, QPushButton, QSizePolicy, QWidget
 
+from src.i18n import tr
 from src.profiles import CharmFilterModel, DynamicCharmFilterModel, DynamicSealFilterModel, SealFilterModel
 from src.profiles.charm_seal.dialogs import CreateCharmOrSeal
 from src.profiles.charm_seal.group import BaseGroupEditor, CharmGroupEditor, SealGroupEditor
@@ -18,7 +19,7 @@ SEALS_TABNAME = "Seals"
 
 def _set_summary(sets: list[str]) -> str:
     if not sets:
-        return "No sets selected"
+        return tr("No sets selected")
     return ", ".join(sets)
 
 
@@ -55,8 +56,10 @@ class BaseCharmsSealsTab[ModelT, ConfigT](TabGroupWidget[ModelT]):
                 if item_name in item_names:
                     QMessageBox.warning(
                         self,
-                        "Warning",
-                        f"{self.type_prefix.capitalize()} name already exists, please rename {item_name} in the profile file.",
+                        tr("Warning"),
+                        tr("{kind} name already exists, please rename {item_name} in the profile file.").format(
+                            kind=self.type_prefix.capitalize(), item_name=item_name
+                        ),
                     )
                     continue
                 item_names.append(item_name)
@@ -90,19 +93,19 @@ class BaseCharmsSealsTab[ModelT, ConfigT](TabGroupWidget[ModelT]):
 
     @override
     def add_button_text(self) -> str:
-        return f"Create {self.type_prefix.capitalize()}"
+        return tr("Create {kind}").format(kind=self.type_prefix.capitalize())
 
     @override
     def remove_button_text(self) -> str:
-        return f"Remove {self.type_prefix.capitalize()}"
+        return tr("Remove {kind}").format(kind=self.type_prefix.capitalize())
 
     @override
     def toolbar_buttons(self) -> list[QPushButton]:
         buttons = super().toolbar_buttons()
 
-        set_all_min_greater_affix_button = QPushButton("Set All Min GAs (Excludes Auto Synced Items)")
+        set_all_min_greater_affix_button = QPushButton(tr("Set All Min GAs (Excludes Auto Synced Items)"))
         set_all_min_greater_affix_button.clicked.connect(self.set_all_min_greater_affix)
-        convert_all_to_min_percent_button = QPushButton("Convert All To Min %")
+        convert_all_to_min_percent_button = QPushButton(tr("Convert All To Min %"))
         convert_all_to_min_percent_button.clicked.connect(self.convert_all_to_min_percent_of_affix)
 
         buttons.extend([set_all_min_greater_affix_button, convert_all_to_min_percent_button])
@@ -167,10 +170,12 @@ def _create_readonly_line_edit():
 
 
 def _create_auto_sync_checkbox():
-    checkbox = QCheckBox("Auto Sync")
+    checkbox = QCheckBox(tr("Auto Sync"))
     checkbox.setToolTip(
-        "When checked: Min Greater Affixes automatically matches the number of affixes marked as 'want greater'\n"
-        "When unchecked: You can manually set Min Greater Affixes to any value"
+        tr(
+            "When checked: Min Greater Affixes automatically matches the number of affixes marked as 'want greater'\n"
+            "When unchecked: You can manually set Min Greater Affixes to any value"
+        )
     )
     return checkbox
 

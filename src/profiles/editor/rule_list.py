@@ -13,6 +13,8 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from src.i18n import tr
+
 ItemType = TypeVar("ItemType")
 
 
@@ -45,7 +47,7 @@ class RuleListTab[ItemType](QWidget):
             )
             button_layout.addWidget(add_button)
 
-        remove_button = QPushButton("Remove Selected")
+        remove_button = QPushButton(tr("Remove Selected"))
         remove_button.clicked.connect(self.remove_selected)
         button_layout.addWidget(remove_button)
         main_layout.addLayout(button_layout)
@@ -69,7 +71,7 @@ class RuleListTab[ItemType](QWidget):
     def remove_selected(self):
         rows = sorted({self.list_widget.row(item) for item in self.list_widget.selectedItems()}, reverse=True)
         if not rows:
-            QMessageBox.warning(self, "Warning", self.empty_selection_warning_text())
+            QMessageBox.warning(self, tr("Warning"), self.empty_selection_warning_text())
             return
 
         for row in rows:
@@ -93,4 +95,4 @@ class RuleListTab[ItemType](QWidget):
         raise NotImplementedError(msg)
 
     def empty_selection_warning_text(self) -> str:
-        return "Select at least one rule to remove."
+        return tr("Select at least one rule to remove.")

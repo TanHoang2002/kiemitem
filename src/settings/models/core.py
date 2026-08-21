@@ -103,6 +103,22 @@ class _IniBaseModel(BaseModel):
 
 
 class AdvancedOptionsModel(_IniBaseModel):
+    capture_single: str = Field(
+        default="f2",
+        description="GiaoIT V1: hotkey to capture the item currently under the cursor (writes JSON + tooltip PNG).",
+        json_schema_extra={IS_HOTKEY_KEY: "True"},
+    )
+    capture_stash: str = Field(
+        default="f4",
+        description="GiaoIT V1: hotkey to read every item in the open stash tabs (writes one JSON + one PNG per item).",
+        json_schema_extra={IS_HOTKEY_KEY: "True"},
+    )
+    affix_search_trigger: str = Field(
+        default="f5",
+        description="GiaoIT: hotkey to trigger the Affix Search panel in the dashboard. "
+        "Scans stash/inventory and lists items matching the affix rule you entered in the panel.",
+        json_schema_extra={IS_HOTKEY_KEY: "True"},
+    )
     disable_tts_warning: bool = Field(
         default=False,
         description="If TTS is working for you but you are still receiving the warning, check this box to disable it.",
@@ -123,8 +139,9 @@ class AdvancedOptionsModel(_IniBaseModel):
     )
     info_overlay: str = Field(
         default="f6",
-        description="Hotkey to open/close the info panel overlay",
-        json_schema_extra={IS_HOTKEY_KEY: "True"},
+        description="Hotkey to open/close the info panel overlay. Disabled in GiaoIT build — kept for reference.",
+        title="Info Overlay Hotkey (Disabled)",
+        json_schema_extra={IS_HOTKEY_KEY: "True", HIDE_FROM_GUI_KEY: "True"},
     )
     log_lvl: LogLevels = Field(
         default=LogLevels.info,
@@ -182,7 +199,10 @@ class AdvancedOptionsModel(_IniBaseModel):
         default="f9", description="Hotkey to enable/disable the vision mode", json_schema_extra={IS_HOTKEY_KEY: "True"}
     )
     toggle_paragon_overlay: str = Field(
-        default="f10", description="Hotkey to open/close the Paragon overlay", json_schema_extra={IS_HOTKEY_KEY: "True"}
+        default="f10",
+        description="Hotkey to open/close the Paragon overlay. Disabled in GiaoIT build — kept for reference.",
+        title="Paragon Overlay Hotkey (Disabled)",
+        json_schema_extra={IS_HOTKEY_KEY: "True", HIDE_FROM_GUI_KEY: "True"},
     )
     vision_mode_only: bool = Field(
         default=False,
@@ -194,6 +214,9 @@ class AdvancedOptionsModel(_IniBaseModel):
     @model_validator(mode="after")
     def key_must_be_unique(self) -> AdvancedOptionsModel:
         keys = [
+            self.capture_single,
+            self.capture_stash,
+            self.affix_search_trigger,
             self.exit_key,
             self.toggle_paragon_overlay,
             self.force_refresh_only,
@@ -211,6 +234,9 @@ class AdvancedOptionsModel(_IniBaseModel):
         return self
 
     @field_validator(
+        "capture_single",
+        "capture_stash",
+        "affix_search_trigger",
         "exit_key",
         "toggle_paragon_overlay",
         "force_refresh_only",

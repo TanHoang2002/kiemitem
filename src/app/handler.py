@@ -19,6 +19,7 @@ from src.automation import (
     safe_exit,
 )
 from src.game_data import GameCatalog
+from src.i18n import tr
 from src.loot import VisionMode, create_vision_mode, run_loot_filter
 from src.overlay import InventoryExpTracker, is_open, open_overlay, request_close
 from src.overlay import set_busy_checker as set_info_busy_checker
@@ -61,6 +62,14 @@ class ScriptHandler:
 
         self.setup_key_binds()
         self._config.register_change_listener(self._on_config_changed)
+        # GiaoIT auto-scan: subscribe to TTS publisher if capture_auto_scan is on.
+        # The scanner defers when filter is running so it doesn't double-capture.
+        try:
+            from src.giaoit.auto_scan import refresh_subscription
+
+            refresh_subscription()
+        except Exception:
+            LOGGER.exception("GiaoIT auto-scan init failed; continuing without auto-scan")
         if self._config.general.run_vision_mode_on_startup:
             self.run_vision_mode()
 
@@ -77,10 +86,60 @@ class ScriptHandler:
                 self._refresh_hotkeys(self._config)
             if has_any_changed(changed_keys, LANGUAGE_SETTING_KEYS):
                 self._refresh_language_assets(self._config)
+            if "general.capture_auto_scan" in changed_keys or "general.capture_mode" in changed_keys:
+                self._refresh_auto_scan()
             if VISION_MODE_TYPE_SETTING_KEY in changed_keys:
                 self._notify_manual_restart_required("vision mode changes")
             elif has_any_changed(changed_keys, MANUAL_RESTART_SETTING_KEYS):
                 self._notify_manual_restart_required("settings changes")
+
+    def _refresh_auto_scan(self) -> None:
+        try:
+            from src.giaoit.auto_scan import refresh_subscription
+
+            refresh_subscription()
+        except Exception:
+            LOGGER.exception("GiaoIT auto-scan refresh failed")
+
+    def _signal_auto_scan_filter_running(self, running: bool) -> None:
+        """Tell auto-scan whether the loot filter is iterating items.
+
+        When True, auto-scan defers to the filter's own _maybe_capture_item to
+        avoid double-capturing the same item.
+        """
+        try:
+            from src.giaoit.auto_scan import get_auto_scanner
+
+            get_auto_scanner().set_filter_running(running)
+        except Exception:
+            LOGGER.debug("auto-scan filter-signal failed", exc_info=True)
+
+    def trigger_affix_search(self):
+        """F5: trigger the embedded Affix Search panel in the dashboard.
+
+        ``check_focus=False`` on the hotkey means it works even when Diablo IV
+        is in the foreground. We locate the main window via the QApplication
+        instance, find the ``AffixSearchPanel`` widget, and call its search
+        method. The panel handles scanning + result display.
+        """
+        LOGGER.info("GiaoIT affix_search_trigger (F5) hotkey fired")
+        try:
+            from PyQt6.QtWidgets import QApplication
+
+            from src.giaoit.affix_search import AffixSearchPanel
+
+            app = QApplication.instance()
+            if app is None:
+                LOGGER.warning("No QApplication — cannot trigger Affix Search")
+                return
+            for widget in app.topLevelWidgets():
+                panel = widget.findChild(AffixSearchPanel)
+                if panel is not None:
+                    panel._start_search()
+                    return
+            LOGGER.warning("F5 fired but no AffixSearchPanel found — is the dashboard initialised?")
+        except Exception:
+            LOGGER.exception("Failed to trigger Affix Search via F5")
 
     def _hotkey_signature(self, config: Settings) -> tuple[str | bool, ...]:
         advanced_options = config.advanced_options
@@ -96,6 +155,9 @@ class ScriptHandler:
             advanced_options.force_refresh_only,
             advanced_options.move_to_inv,
             advanced_options.move_to_chest,
+            advanced_options.capture_single,
+            advanced_options.capture_stash,
+            advanced_options.affix_search_trigger,
         )
 
     def _refresh_hotkeys(self, config: Settings) -> None:
@@ -105,7 +167,7 @@ class ScriptHandler:
 
         self._clear_key_binds()
         self.setup_key_binds()
-        LOGGER.info("Reloaded hotkeys from updated settings")
+        LOGGER.info(tr("Reloaded hotkeys from updated settings"))
 
     def _refresh_language_assets(self, config: Settings) -> None:
         if config.general.language == self._language:
@@ -113,20 +175,20 @@ class ScriptHandler:
 
         GameCatalog().load_data()
         self._language = config.general.language
-        LOGGER.info("Reloaded language assets for %s", self._language)
+        LOGGER.info(tr("Reloaded language assets for %s"), self._language)
 
     def _notify_manual_restart_required(self, reason: str) -> None:
         if self._manual_restart_warning:
             return
 
         self._manual_restart_warning = True
-        LOGGER.warning("Please restart d4lf manually to apply %s.", reason)
+        LOGGER.warning(tr("Please restart d4lf manually to apply %s."), reason)
 
     def toggle_paragon_overlay(self):
         """Toggle the Paragon overlay thread (start if not running, request close if running)."""
         try:
             if self.paragon_overlay_thread is not None and self.paragon_overlay_thread.is_alive():
-                LOGGER.info("Closing Paragon overlay")
+                LOGGER.info(tr("Closing Paragon overlay"))
                 with suppress(Exception):
                     request_close_paragon()
                 self.paragon_overlay_thread.join(timeout=2)
@@ -149,7 +211,7 @@ class ScriptHandler:
             if self._vision_mode_was_running_before_overlay:
                 self.vision_mode.stop()
 
-            LOGGER.info("Opening Paragon overlay (source: %s)", overlay_dir)
+            LOGGER.info(tr("Opening Paragon overlay (source: %s)"), overlay_dir)
             self.paragon_overlay_thread = threading.Thread(
                 target=self._run_paragon_overlay, args=(str(overlay_dir),), daemon=True
             )
@@ -181,12 +243,12 @@ class ScriptHandler:
         self._info_overlay_last_toggle_time = now
 
         if is_open():
-            LOGGER.info("Closing Info Panel overlay")
+            LOGGER.info(tr("Closing Info Panel overlay"))
             with suppress(Exception):
                 request_close()
             return
 
-        LOGGER.info("Opening Info Panel overlay")
+        LOGGER.info(tr("Opening Info Panel overlay"))
         try:
             open_overlay()
         except Exception:
@@ -210,8 +272,9 @@ class ScriptHandler:
         advanced_options = config.advanced_options
         self._register_hotkey(advanced_options.run_vision_mode, lambda: self.run_vision_mode())
         self._register_hotkey(advanced_options.exit_key, lambda: self._graceful_exit(), check_focus=False)
-        self._register_hotkey(advanced_options.toggle_paragon_overlay, lambda: self.toggle_paragon_overlay())
-        self._register_hotkey(advanced_options.info_overlay, lambda: self.toggle_info_overlay())
+        # GiaoIT: F6 (info overlay) và F10 (paragon overlay) disabled — tập trung item pipeline.
+        # self._register_hotkey(advanced_options.toggle_paragon_overlay, lambda: self.toggle_paragon_overlay())
+        # self._register_hotkey(advanced_options.info_overlay, lambda: self.toggle_info_overlay())
         self._register_hotkey(config.char.inventory, lambda: InventoryExpTracker().on_inventory_open())
         if not advanced_options.vision_mode_only:
             self._register_hotkey(advanced_options.run_filter, lambda: self.filter_items())
@@ -225,6 +288,20 @@ class ScriptHandler:
             self._register_hotkey(advanced_options.move_to_inv, lambda: self.move_items_to_inventory())
             self._register_hotkey(advanced_options.move_to_chest, lambda: self.move_items_to_stash())
 
+        # GiaoIT V1 capture hotkeys — registered regardless of vision_mode_only
+        # because F2 (single) only needs the cursor; F4 (stash) refuses to run
+        # when vision_mode_only is on (see capture_stash_full).
+        self._register_hotkey(advanced_options.capture_single, lambda: self.capture_single_item())
+        self._register_hotkey(advanced_options.capture_stash, lambda: self.capture_stash_full())
+        # F6: Scan stash/inventory and log currency (keys, tributes, uniques) counts.
+        self._register_hotkey("f6", lambda: self.capture_currency())
+        # F5: trigger the embedded Affix Search panel in the dashboard. The
+        # hotkey works while the game window is in the foreground so users can
+        # search without alt-tabbing back to the dashboard.
+        self._register_hotkey(
+            advanced_options.affix_search_trigger, lambda: self.trigger_affix_search(), check_focus=False
+        )
+
         self._current_hotkey_signature = self._hotkey_signature(config)
 
     def filter_items(self, force_refresh=ItemRefreshType.no_refresh, no_match_action: str = "junk"):
@@ -232,9 +309,11 @@ class ScriptHandler:
             self._start_or_stop_loot_interaction_thread(run_loot_filter, (force_refresh, no_match_action))
         else:
             LOGGER.warning(
-                "TTS connection has not been made yet. Have you followed all of the instructions in %s? "
-                "If so, it's possible your Windows user does not have the correct permissions to allow Diablo 4 "
-                "to connect to a third party screen reader.",
+                tr(
+                    "TTS connection has not been made yet. Have you followed all of the instructions in %s? "
+                    "If so, it's possible your Windows user does not have the correct permissions to allow Diablo 4 "
+                    "to connect to a third party screen reader."
+                ),
                 SETUP_INSTRUCTIONS_URL,
             )
 
@@ -248,12 +327,14 @@ class ScriptHandler:
         if LOCK.acquire(blocking=False):
             try:
                 if self.loot_interaction_thread is not None:
-                    LOGGER.info("Stopping filter or move process")
+                    LOGGER.info(tr("Stopping filter or move process"))
                     kill_thread(self.loot_interaction_thread)
                     self.loot_interaction_thread = None
+                    self._signal_auto_scan_filter_running(False)
                     if self.did_stop_scripts and not self.vision_mode.running():
                         self.vision_mode.start()
                 else:
+                    self._signal_auto_scan_filter_running(True)
                     self.loot_interaction_thread = threading.Thread(
                         target=self._wrapper_run_loot_interaction_method,
                         args=(loot_interaction_method, method_args),
@@ -291,3 +372,64 @@ class ScriptHandler:
                 LOCK.release()
         else:
             return
+
+    def capture_single_item(self):
+        """GiaoIT V1 — F2: capture item under cursor and write JSON + tooltip PNG."""
+        LOGGER.info("GiaoIT capture_single (F2) hotkey fired")
+        from src.giaoit.runner import run_capture_single
+
+        self._start_or_stop_loot_interaction_thread(run_capture_single, ())
+
+    def capture_stash_full(self):
+        """GiaoIT V1 — F4: read every item in stash/inventory and write a bundle.
+
+        Toggle behaviour: pressing F4 again while a scan is running cancels it
+        gracefully — the scan stops after the current slot and writes a partial
+        bundle with whatever was captured so far.
+
+        Refuses to start in vision_mode_only because scanning requires moving
+        the mouse over each slot (violates "look, don't touch").
+        """
+        LOGGER.info("GiaoIT capture_stash (F4) hotkey fired")
+        if self.loot_interaction_thread is not None and self.loot_interaction_thread.is_alive():
+            # Toggle off — request cancel so the scan stops at the next slot
+            # boundary. PyThreadState_SetAsyncExc can't interrupt time.sleep,
+            # so a cooperative cancel flag is the only way to stop gracefully.
+            try:
+                from src.giaoit.stash_scan import request_cancel
+
+                request_cancel()
+                LOGGER.info("F4 pressed again — cancelling current scan after current slot")
+            except Exception:
+                LOGGER.debug("request_cancel failed; falling back to thread kill", exc_info=True)
+            return
+        if self._config.advanced_options.vision_mode_only:
+            LOGGER.warning(
+                "GiaoIT capture_stash disabled while vision_mode_only is on (kept in English for diagnostics)"
+            )
+            return
+        from src.giaoit.runner import run_capture_stash
+
+        self._start_or_stop_loot_interaction_thread(run_capture_stash, ())
+
+    def capture_currency(self):
+        """GiaoIT — F6: read every item in stash/inventory, write a bundle, and print currency counts.
+
+        Toggle behaviour: pressing F6 again while a scan is running cancels it gracefully.
+        """
+        LOGGER.info("GiaoIT capture_currency (F6) hotkey fired")
+        if self.loot_interaction_thread is not None and self.loot_interaction_thread.is_alive():
+            try:
+                from src.giaoit.stash_scan import request_cancel
+
+                request_cancel()
+                LOGGER.info("F6 pressed again — cancelling current scan after current slot")
+            except Exception:
+                LOGGER.debug("request_cancel failed; falling back to thread kill", exc_info=True)
+            return
+        if self._config.advanced_options.vision_mode_only:
+            LOGGER.warning("GiaoIT capture_currency disabled while vision_mode_only is on")
+            return
+        from src.giaoit.runner import run_capture_currency
+
+        self._start_or_stop_loot_interaction_thread(run_capture_currency, ())

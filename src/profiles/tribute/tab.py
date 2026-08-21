@@ -14,6 +14,7 @@ from PyQt6.QtWidgets import (
 )
 
 from src.game_data import GameCatalog
+from src.i18n import tr
 from src.profiles import TributeFilterModel
 from src.profiles.editor.pickers import RarityPicker, rarity_summary
 from src.profiles.tribute.dialogs import CreateTribute
@@ -41,17 +42,17 @@ class TributesTab(QWidget):
         main_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
         label = QLabel(
-            "Add tribute names and select rarities you want to keep. Leaving rarities empty keeps all rarities."
+            tr("Add tribute names and select rarities you want to keep. Leaving rarities empty keeps all rarities.")
         )
         label.setWordWrap(True)
         main_layout.addWidget(label)
 
         button_layout = QHBoxLayout()
-        add_tribute_button = QPushButton("Add Tribute")
+        add_tribute_button = QPushButton(tr("Add Tribute"))
         add_tribute_button.clicked.connect(self._add_tribute)
         button_layout.addWidget(add_tribute_button)
 
-        remove_button = QPushButton("Remove Selected")
+        remove_button = QPushButton(tr("Remove Selected"))
         remove_button.clicked.connect(self.remove_selected)
         button_layout.addWidget(remove_button)
         main_layout.addLayout(button_layout)
@@ -66,7 +67,7 @@ class TributesTab(QWidget):
         rarity_layout.addWidget(edit_rarities_button)
         rarity_layout.addStretch()
         rarity_form = QFormLayout()
-        rarity_form.addRow("Rarities:", rarity_layout)
+        rarity_form.addRow(tr("Rarities:"), rarity_layout)
         main_layout.addLayout(rarity_form)
 
         self.list_widget.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
@@ -101,7 +102,7 @@ class TributesTab(QWidget):
     def remove_selected(self):
         rows = sorted({self.list_widget.row(item) for item in self.list_widget.selectedItems()}, reverse=True)
         if not rows:
-            QMessageBox.warning(self, "Warning", "Select at least one tribute rule to remove.")
+            QMessageBox.warning(self, tr("Warning"), tr("Select at least one tribute rule to remove."))
             return
 
         for row in rows:

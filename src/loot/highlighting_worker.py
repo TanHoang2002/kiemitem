@@ -238,6 +238,11 @@ class HighlightingWorker:
         if thread is None or cancel_event is None:
             return
         cancel_event.set()
+        # Guard: a Thread object that was constructed but never .start()'ed
+        # raises RuntimeError on .join(). Skip in that case — there is nothing
+        # to wait for.
+        if not thread.is_alive() and not thread.ident:
+            return
         thread.join()
 
     def check_for_item_still_selected(self: Any, item_center: tuple[int, int], cancel_event: Event) -> None:

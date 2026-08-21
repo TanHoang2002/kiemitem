@@ -16,6 +16,7 @@ from PyQt6.QtWidgets import (
 )
 
 from src.game_data import GameCatalog
+from src.i18n import tr
 from src.profiles import (
     EmptyError,
     Failed,
@@ -56,11 +57,11 @@ class ProfileTab(QWidget):
         scroll_area.setWidgetResizable(True)
         info_layout = QHBoxLayout()
         info_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        tools_groupbox = QGroupBox("Profile")
+        tools_groupbox = QGroupBox(tr("Profile"))
         tools_groupbox_layout = QHBoxLayout()
         self.profile_combo = QComboBox()
-        self.save_button = QPushButton("Save")
-        self.refresh_button = QPushButton("Undo Changes")
+        self.save_button = QPushButton(tr("Save"))
+        self.refresh_button = QPushButton(tr("Undo Changes"))
         self.profile_combo.currentIndexChanged.connect(self.profile_selection_changed)
         self.save_button.clicked.connect(self.save_yaml)
         self.refresh_button.clicked.connect(self.refresh)
@@ -75,11 +76,13 @@ class ProfileTab(QWidget):
         scroll_widget.setLayout(self.scrollable_layout)
         scroll_area.setWidget(scroll_widget)
         self.main_layout.addWidget(scroll_area)
-        instructions_label = QLabel("Instructions")
+        instructions_label = QLabel(tr("Instructions"))
         self.main_layout.addWidget(instructions_label)
         instructions_text = QTextBrowser()
         instructions_text.append(
-            "Select a profile from the dropdown. Click 'Save' to save your changes. Click 'Undo Changes' to revert your changes."
+            tr(
+                "Select a profile from the dropdown. Click 'Save' to save your changes. Click 'Undo Changes' to revert your changes."
+            )
         )
         instructions_text.setFixedHeight(50)
         self.main_layout.addWidget(instructions_text)
@@ -88,8 +91,8 @@ class ProfileTab(QWidget):
     def confirm_discard_changes(self):
         reply = QMessageBox.warning(
             self,
-            "Unsaved Changes",
-            "You have unsaved changes. Do you want to save them before closing?",
+            tr("Unsaved Changes"),
+            tr("You have unsaved changes. Do you want to save them before closing?"),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No | QMessageBox.StandardButton.Cancel,
         )
         if reply == QMessageBox.StandardButton.Yes:
@@ -98,7 +101,7 @@ class ProfileTab(QWidget):
         return reply == QMessageBox.StandardButton.No
 
     def create_alert(self, msg: str):
-        reply = QMessageBox.warning(self, "Alert", msg, QMessageBox.StandardButton.Ok)
+        reply = QMessageBox.warning(self, tr("Alert"), msg, QMessageBox.StandardButton.Ok)
         return reply == QMessageBox.StandardButton.Ok
 
     def profile_selection_changed(self, index):
@@ -167,12 +170,12 @@ class ProfileTab(QWidget):
 
         with QSignalBlocker(self.profile_combo):
             self.profile_combo.clear()
-            self.add_profile_combo_section("--------- Active Profiles ---------", self.active_profiles)
-            self.add_profile_combo_section("--------- Inactive Profiles ---------", self.inactive_profiles)
+            self.add_profile_combo_section(tr("--------- Active Profiles ---------"), self.active_profiles)
+            self.add_profile_combo_section(tr("--------- Inactive Profiles ---------"), self.inactive_profiles)
 
         if not self.active_profiles and not self.inactive_profiles:
             self.current_profile_name = ""
-            self.profile_combo.addItem("No profiles found", None)
+            self.profile_combo.addItem(tr("No profiles found"), None)
             model = self.profile_combo.model()
             if isinstance(model, QStandardItemModel):
                 no_profiles_item = model.item(0)
@@ -224,9 +227,9 @@ class ProfileTab(QWidget):
             return False
         if isinstance(load_result, ValidationError):
             if load_result.guidance:
-                QMessageBox.critical(self, "Profile Validation Failed", load_result.guidance)
+                QMessageBox.critical(self, tr("Profile Validation Failed"), load_result.guidance)
             else:
-                QMessageBox.critical(self, "Validation Error", load_result.message)
+                QMessageBox.critical(self, tr("Validation Error"), load_result.message)
             return False
         if not isinstance(load_result, Loaded):
             return False
@@ -240,15 +243,17 @@ class ProfileTab(QWidget):
             return
         save_result = self.session.save(self.model_editor.get_current_model())
         if isinstance(save_result, Saved):
-            QMessageBox.information(self, "Info", f"Profile saved successfully to {save_result.saved.path.name}")
+            QMessageBox.information(
+                self, tr("Info"), tr("Profile saved successfully to {name}").format(name=save_result.saved.path.name)
+            )
             self.profile_saved.emit(self.model_editor.get_current_model().name)
             self.root = self.model_editor.get_current_model()
             return
         if isinstance(save_result, ValidationDiffers):
             save_coerced = QMessageBox.warning(
                 self,
-                "Warning",
-                "The profile model might not be valid. Do you still want to save your changes ?",
+                tr("Warning"),
+                tr("The profile model might not be valid. Do you still want to save your changes ?"),
                 QMessageBox.StandardButton.Save | QMessageBox.StandardButton.Discard,
             )
             if save_coerced == QMessageBox.StandardButton.Save:
@@ -258,7 +263,9 @@ class ProfileTab(QWidget):
                 force_result = self.session.save(save_result.coerced_model, force=True)
                 if isinstance(force_result, Saved):
                     QMessageBox.information(
-                        self, "Info", f"Profile saved successfully to {force_result.saved.path.name}"
+                        self,
+                        tr("Info"),
+                        tr("Profile saved successfully to {name}").format(name=force_result.saved.path.name),
                     )
                     self.loaded_profile = LoadedProfile(
                         path=loaded_profile.path, name=loaded_profile.name, profile=save_result.coerced_model
@@ -268,13 +275,13 @@ class ProfileTab(QWidget):
                     self.profile_saved.emit(save_result.coerced_model.name)
                     return
                 if isinstance(force_result, Failed):
-                    QMessageBox.critical(self, "Error", f"Failed to save profile: {force_result.error}")
+                    QMessageBox.critical(self, tr("Error"), f"Failed to save profile: {force_result.error}")
                     return
             else:
-                QMessageBox.information(self, "Info", "Profile not saved.")
+                QMessageBox.information(self, tr("Info"), tr("Profile not saved."))
             return
         if isinstance(save_result, Failed):
-            QMessageBox.critical(self, "Error", f"Failed to save profile: {save_result.error}")
+            QMessageBox.critical(self, tr("Error"), f"Failed to save profile: {save_result.error}")
 
     def check_close_save(self):
         if self.root and self.model_editor and self.session.is_dirty(self.model_editor.get_current_model()):

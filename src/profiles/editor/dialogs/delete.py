@@ -11,20 +11,22 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from src.i18n import tr
+
 
 class DeleteItem(QDialog):
     def __init__(self, item_names, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Delete Items")
+        self.setWindowTitle(tr("Delete Items"))
         self.setFixedSize(300, 200)
         self.main_layout = QVBoxLayout()
         self.main_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
-        self.groupbox = QGroupBox("Items")
+        self.groupbox = QGroupBox(tr("Items"))
         scroll_area = QScrollArea(self)
         scroll_widget = QWidget(scroll_area)
         scrollable_layout = QVBoxLayout(scroll_widget)
         self.groupbox_layout = QVBoxLayout()
-        self.groupbox_layout.addWidget(QLabel("Select items to delete:"))
+        self.groupbox_layout.addWidget(QLabel(tr("Select items to delete:")))
         self.checkbox_list: list[QCheckBox] = []
         for name in item_names:
             checkbox = QCheckBox(name)
@@ -35,9 +37,9 @@ class DeleteItem(QDialog):
         self.groupbox_layout.addWidget(scroll_area)
         self.groupbox.setLayout(self.groupbox_layout)
         buttons = QHBoxLayout()
-        self.okButton = QPushButton("OK")
+        self.okButton = QPushButton(tr("OK"))
         self.okButton.clicked.connect(self.accept)
-        self.cancelButton = QPushButton("Cancel")
+        self.cancelButton = QPushButton(tr("Cancel"))
         self.cancelButton.clicked.connect(self.reject)
         buttons.addWidget(self.okButton)
         buttons.addWidget(self.cancelButton)

@@ -25,6 +25,7 @@ from src.app.lifecycle import UnifiedWindowLifecycle
 from src.desktop.activity import ANSIConsoleWidget, QtLogHandler
 from src.desktop.themes import DARK_THEME_TEMPLATE, LIGHT_THEME_TEMPLATE
 from src.desktop.widgets import set_accent_color
+from src.i18n import tr
 from src.importing import create_importer_window
 from src.logger import (
     apply_log_level,
@@ -102,7 +103,7 @@ class UnifiedMainWindow(UnifiedWindowLifecycle):
         """Report a hot-reload failure without interrupting the game window."""
         if hasattr(self, "tray_icon"):
             self.tray_icon.showMessage(
-                "D4LF settings reload failed",
+                tr("D4LF settings reload failed"),
                 f"Could not reload {error.config_path.name}; see the Activity log ({error.log_path}).",
                 QSystemTrayIcon.MessageIcon.Warning,
                 10000,
@@ -126,8 +127,8 @@ class UnifiedMainWindow(UnifiedWindowLifecycle):
         self.setCentralWidget(self.tabs)
         self.activity_tab = ActivityLogWidget(parent=self)
         self.console_output = ANSIConsoleWidget()
-        self.tabs.addTab(self.activity_tab, "Dashboard")
-        self.tabs.addTab(self.console_output, "Full Logs")
+        self.tabs.addTab(self.activity_tab, tr("Dashboard"))
+        self.tabs.addTab(self.console_output, tr("Full Logs"))
         self._setup_tab_corner_widgets()
         self.console_handler.log_signal.connect(self.console_output.append_ansi_text)
         self.console_handler.log_signal.connect(self.activity_tab.log_viewer.append_ansi_text)
@@ -142,12 +143,12 @@ class UnifiedMainWindow(UnifiedWindowLifecycle):
         layout.setContentsMargins(0, 0, 15, 0)
         layout.setSpacing(15)
         if sys.platform == "win32":
-            self.vision_indicator = QLabel("Vision Mode: STOPPED")
-            self.tts_indicator = QLabel("TTS: Disconnected")
+            self.vision_indicator = QLabel(tr("Vision Mode: STOPPED"))
+            self.tts_indicator = QLabel(tr("TTS: Disconnected"))
             style = "color: #ff4d4d; font-weight: bold; font-size: 10pt;"
         else:
-            self.vision_indicator = QLabel("Vision Mode: Disabled (GUI-only)")
-            self.tts_indicator = QLabel("TTS: Disabled (GUI-only)")
+            self.vision_indicator = QLabel(tr("Vision Mode: Disabled (GUI-only)"))
+            self.tts_indicator = QLabel(tr("TTS: Disabled (GUI-only)"))
             style = "color: #b0b0b0; font-weight: bold; font-size: 10pt;"
         self.vision_indicator.setStyleSheet(style)
         self.tts_indicator.setStyleSheet(style)
@@ -188,20 +189,20 @@ class UnifiedMainWindow(UnifiedWindowLifecycle):
 
     def update_vision_status(self, is_running: bool | None):
         if is_running is None:
-            self.vision_indicator.setText("Vision Mode: Disabled (GUI-only)")
+            self.vision_indicator.setText(tr("Vision Mode: Disabled (GUI-only)"))
             self.vision_indicator.setStyleSheet("color: #b0b0b0; font-weight: bold; font-size: 10pt;")
             return
-        self.vision_indicator.setText(f"Vision Mode: {'RUNNING' if is_running else 'STOPPED'}")
+        self.vision_indicator.setText(tr("Vision Mode: STOPPED") if not is_running else tr("Vision Mode: RUNNING"))
         self.vision_indicator.setStyleSheet(
             f"color: {'#23fc5d' if is_running else '#ff4d4d'}; font-weight: bold; font-size: 10pt;"
         )
 
     def update_tts_status(self, connected: bool | None):
         if connected is None:
-            self.tts_indicator.setText("TTS: Disabled (GUI-only)")
+            self.tts_indicator.setText(tr("TTS: Disabled (GUI-only)"))
             self.tts_indicator.setStyleSheet("color: #b0b0b0; font-weight: bold; font-size: 10pt;")
             return
-        self.tts_indicator.setText(f"TTS: {'Connected' if connected else 'Disconnected'}")
+        self.tts_indicator.setText(tr("TTS: Connected") if connected else tr("TTS: Disconnected"))
         self.tts_indicator.setStyleSheet(
             f"color: {'#23fc5d' if connected else '#ff4d4d'}; font-weight: bold; font-size: 10pt;"
         )
@@ -229,7 +230,7 @@ class UnifiedMainWindow(UnifiedWindowLifecycle):
     def _on_profile_load_report(self, report: ProfileLoadReport) -> None:
         if hasattr(self, "tray_icon"):
             self.tray_icon.showMessage(
-                "D4LF profile loading", report.message, QSystemTrayIcon.MessageIcon.Warning, 10000
+                tr("D4LF profile loading"), report.message, QSystemTrayIcon.MessageIcon.Warning, 10000
             )
 
     def _show_singleton_modal(self, key: str, window_class, *args, **kwargs):
