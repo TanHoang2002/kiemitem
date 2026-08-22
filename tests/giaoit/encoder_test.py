@@ -25,9 +25,7 @@ def _make_item() -> Item:
                 type=AffixType.greater,
             ),
         ],
-        inherent=[
-            Affix(name="inherent_int", text="+330 Intelligence", value=330.0, type=AffixType.inherent),
-        ],
+        inherent=[Affix(name="inherent_int", text="+330 Intelligence", value=330.0, type=AffixType.inherent)],
         aspect=Aspect(name="aspect_iron_maelstrom", text="...", value=None, min_value=None, max_value=None),
     )
 
@@ -51,10 +49,7 @@ def test_single_payload_has_all_outer_fields() -> None:
 
 def test_stash_payload_has_stash_info() -> None:
     bundle = CaptureBundle(
-        kind="stash",
-        items=[CapturedItem(item=_make_item(), image=None)],
-        source="f4_key",
-        stash_tabs_scanned=[0, 1],
+        kind="stash", items=[CapturedItem(item=_make_item(), image=None)], source="f4_key", stash_tabs_scanned=[0, 1]
     )
     payload = build_payload(bundle, _meta())
 
@@ -89,9 +84,7 @@ def test_affix_type_serialises_as_string_enum() -> None:
 
 def test_image_file_field_round_trips() -> None:
     bundle = CaptureBundle(
-        kind="single",
-        items=[CapturedItem(item=_make_item(), image=object(), image_file="abc123.png")],
-        source="f2_key",
+        kind="single", items=[CapturedItem(item=_make_item(), image=object(), image_file="abc123.png")], source="f2_key"
     )
     payload = build_payload(bundle, _meta())
 
@@ -109,10 +102,7 @@ def test_none_item_type_serialises_to_null() -> None:
 
 def test_payload_is_json_serialisable() -> None:
     bundle = CaptureBundle(
-        kind="stash",
-        items=[CapturedItem(item=_make_item(), image=None)],
-        source="f4_key",
-        stash_tabs_scanned=[0],
+        kind="stash", items=[CapturedItem(item=_make_item(), image=None)], source="f4_key", stash_tabs_scanned=[0]
     )
     payload = build_payload(bundle, _meta())
 
@@ -132,10 +122,7 @@ def test_single_payload_has_item_hash() -> None:
 
 def test_stash_payload_has_no_item_hash() -> None:
     bundle = CaptureBundle(
-        kind="stash",
-        items=[CapturedItem(item=_make_item(), image=None)],
-        source="f4_key",
-        stash_tabs_scanned=[0],
+        kind="stash", items=[CapturedItem(item=_make_item(), image=None)], source="f4_key", stash_tabs_scanned=[0]
     )
     payload = build_payload(bundle, _meta())
 
@@ -154,12 +141,7 @@ def test_item_hash_changes_when_value_changes() -> None:
     from src.giaoit.encoder import item_hash
 
     base = _make_item()
-    other = Item(
-        item_type=base.item_type,
-        rarity=base.rarity,
-        power=999,
-        affixes=base.affixes,
-    )
+    other = Item(item_type=base.item_type, rarity=base.rarity, power=999, affixes=base.affixes)
     assert item_hash(base) != item_hash(other)
 
 

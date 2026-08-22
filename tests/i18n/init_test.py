@@ -1,6 +1,6 @@
 """Smoke test for the public surface of src.i18n."""
 
-import src.i18n as i18n
+from src import i18n
 
 
 def test_public_symbols_importable() -> None:

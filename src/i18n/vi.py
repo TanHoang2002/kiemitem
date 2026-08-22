@@ -29,9 +29,7 @@ STRINGS_VI: dict[str, str] = {
         "d4lf không thể tự khởi động lại. Vui lòng khởi động lại thủ công."
     ),
     "Error validating value": "Lỗi khi kiểm tra giá trị",
-    "Your value has been reset to its previous version.": (
-        "Giá trị của bạn đã được đặt lại về phiên bản trước đó."
-    ),
+    "Your value has been reset to its previous version.": ("Giá trị của bạn đã được đặt lại về phiên bản trước đó."),
     "Set Hotkey": "Đặt phím tắt",
     "Press the key or combination of keys you\nwant to use as a hotkey, then click save.": (
         "Nhấn phím hoặc tổ hợp phím bạn\nmuốn dùng làm phím tắt, sau đó bấm Lưu."
@@ -85,9 +83,7 @@ STRINGS_VI: dict[str, str] = {
     "Are you sure you want to permanently delete the profile '{name}'?": (
         "Bạn có chắc muốn xóa vĩnh viễn hồ sơ '{name}' không?"
     ),
-    "No Profiles found. Please import a profile below.": (
-        "Không tìm thấy hồ sơ. Vui lòng nhập hồ sơ bên dưới."
-    ),
+    "No Profiles found. Please import a profile below.": ("Không tìm thấy hồ sơ. Vui lòng nhập hồ sơ bên dưới."),
     "Last Modified:": "Sửa lần cuối:",
     "Items:": "Món đồ:",
     "Affix Filters:": "Bộ lọc affix:",
@@ -150,9 +146,7 @@ STRINGS_VI: dict[str, str] = {
     "Unique Aspects": "Aspect Unique",
     "Create Item": "Tạo món",
     "Remove Item": "Xóa món",
-    "Set All Min GAs (Excludes Auto Synced Items)": (
-        "Đặt GA tối thiểu cho tất cả (trừ món tự đồng bộ)"
-    ),
+    "Set All Min GAs (Excludes Auto Synced Items)": ("Đặt GA tối thiểu cho tất cả (trừ món tự đồng bộ)"),
     "Convert All To Min %": "Chuyển tất cả sang % tối thiểu",
     "Set all minPower": "Đặt Power tối thiểu cho tất cả",
     "Item name already exist please rename {item_name} in the profile file.": (
@@ -315,9 +309,7 @@ STRINGS_VI: dict[str, str] = {
     "Refresh Timers Now": "Làm mới bộ đếm ngay",
     "Lock Position": "Khóa vị trí",
     "Close Overlay": "Đóng overlay",
-    "DRAG ACROSS YOUR EXPERIENCE BAR\n(Escape to cancel)": (
-        "KÉO QUA THANH KINH NGHIỆM\n(Escape để hủy)"
-    ),
+    "DRAG ACROSS YOUR EXPERIENCE BAR\n(Escape to cancel)": ("KÉO QUA THANH KINH NGHIỆM\n(Escape để hủy)"),
     # ── LOGGER.info user-facing messages ───────────────────────────────────
     "Reloaded hotkeys from updated settings": "Đã tải lại phím tắt từ cài đặt mới",
     "Reloaded language assets for %s": "Đã tải lại tài nguyên ngôn ngữ cho %s",

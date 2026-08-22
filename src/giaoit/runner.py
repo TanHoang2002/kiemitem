@@ -61,23 +61,28 @@ def run_capture_currency() -> None:
     try:
         import re
         from collections import Counter
-        
+
         counts = Counter()
         for captured in bundle.items:
             item = captured.item
             orig_name = str(item.original_name or "").lower()
             name = str(item.name or "").lower()
-            
+
             # Extract stack size from parentheses: e.g., "GREATER LAIR KEY (1000)" -> 1000
             match = re.search(r"\((\d+)\)", orig_name)
             quantity = int(match.group(1)) if match else 1
-            
+
             # 1. Greater Lair Key
             if "greater lair" in orig_name or "greater lair" in name:
                 counts["Greater Lair Key"] += quantity
             # 2. Lair Key
             elif "lair" in orig_name or "lair" in name:
-                if "greater" not in orig_name and "greater" not in name and "superior" not in orig_name and "superior" not in name:
+                if (
+                    "greater" not in orig_name
+                    and "greater" not in name
+                    and "superior" not in orig_name
+                    and "superior" not in name
+                ):
                     counts["Lair Key"] += quantity
             # 3. Superior Lair Key
             elif "superior" in orig_name or "superior" in name:
@@ -124,7 +129,7 @@ def run_capture_currency() -> None:
         LOGGER.info("=" * 50)
         LOGGER.info("📊 THỐNG KÊ SỐ LƯỢNG CURRENCY (F6):")
         LOGGER.info("=" * 50)
-        
+
         display_keys = [
             "Greater Lair Key",
             "Lair Key",
@@ -144,16 +149,15 @@ def run_capture_currency() -> None:
             "Flawless Topaz",
             "Flawless Emerald",
             "Flawless Diamond",
-            "Flawless Amethyst"
+            "Flawless Amethyst",
         ]
-        
+
         for key in display_keys:
             count = counts.get(key, 0)
             LOGGER.info(f"🔹 {key:40}: {count:5d}")
-            
+
         LOGGER.info("-" * 50)
         LOGGER.info(f"Tổng số ô vật phẩm đã quét: {len(bundle.items)}")
         LOGGER.info("=" * 50)
     except Exception:
         LOGGER.exception("Failed to compute currency statistics")
-

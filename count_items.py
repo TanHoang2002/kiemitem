@@ -3,14 +3,15 @@ import pathlib
 import re
 from collections import Counter
 
+
 def get_latest_stash_payload():
     giaoit_dir = pathlib.Path.home() / ".giaoit"
-    
+
     # 1. Check pending directory
     pending_file = giaoit_dir / "captures" / "pending" / "latest_stash.json"
     if pending_file.exists():
         return pending_file
-        
+
     # 2. Check sent directory for latest stash folder
     sent_dir = giaoit_dir / "captures" / "sent"
     if sent_dir.exists():
@@ -20,7 +21,7 @@ def get_latest_stash_payload():
             payload_file = stash_folders[0] / "payload.json"
             if payload_file.exists():
                 return payload_file
-                
+
     # 3. Check received directory for latest JSON
     received_dir = giaoit_dir / "received"
     if received_dir.exists():
@@ -34,8 +35,9 @@ def get_latest_stash_payload():
                         return f
                 except Exception:
                     continue
-                    
+
     return None
+
 
 def main():
     payload_path = get_latest_stash_payload()
@@ -43,40 +45,45 @@ def main():
         print("\n❌ Không tìm thấy tệp dữ liệu rương đã quét nào.")
         print("Vui lòng mở rương đồ trong game và bấm F6 để quét rương trước.")
         return
-        
+
     print(f"\n📂 Đang đọc dữ liệu từ tệp: {payload_path.name}")
     try:
         data = json.loads(payload_path.read_text(encoding="utf-8"))
     except Exception as e:
         print(f"❌ Lỗi đọc tệp JSON: {e}")
         return
-        
+
     payload_data = data.get("payload", data)
     items_list = payload_data.get("items", [])
-    
+
     if not items_list:
         print("ℹ️ Rương đã quét không chứa vật phẩm nào.")
         return
-        
+
     counts = Counter()
     total_slots = len(items_list)
-    
+
     for item_entry in items_list:
         item = item_entry.get("item", {})
         orig_name = str(item.get("original_name", "")).lower()
         name = str(item.get("name", "")).lower()
-        
+
         # Extract stack size from parentheses: e.g. "GREATER LAIR KEY (1000)" -> 1000
         match = re.search(r"\((\d+)\)", orig_name)
         quantity = int(match.group(1)) if match else 1
-        
+
         # Match categories
         # 1. Greater Lair Key
         if "greater lair" in orig_name or "greater lair" in name:
             counts["Greater Lair Key"] += quantity
         # 2. Lair Key
         elif "lair" in orig_name or "lair" in name:
-            if "greater" not in orig_name and "greater" not in name and "superior" not in orig_name and "superior" not in name:
+            if (
+                "greater" not in orig_name
+                and "greater" not in name
+                and "superior" not in orig_name
+                and "superior" not in name
+            ):
                 counts["Lair Key"] += quantity
         # 3. Superior Lair Key
         elif "superior" in orig_name or "superior" in name:
@@ -123,7 +130,7 @@ def main():
     print("\n==============================================")
     print("📊 KẾT QUẢ THỐNG KÊ SỐ LƯỢNG CURRENCY (F6):")
     print("==============================================")
-    
+
     display_keys = [
         "Greater Lair Key",
         "Lair Key",
@@ -143,16 +150,17 @@ def main():
         "Flawless Topaz",
         "Flawless Emerald",
         "Flawless Diamond",
-        "Flawless Amethyst"
+        "Flawless Amethyst",
     ]
-    
+
     for key in display_keys:
         count = counts.get(key, 0)
         print(f"🔹 {key:30} : {count:5d}")
-        
+
     print("----------------------------------------------")
     print(f"Tổng số ô vật phẩm đã quét trong rương: {total_slots}")
     print("==============================================\n")
+
 
 if __name__ == "__main__":
     main()

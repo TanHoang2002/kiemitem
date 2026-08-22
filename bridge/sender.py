@@ -34,11 +34,7 @@ class SendResult:
 
 
 def send_payload(
-    receiver_url: str,
-    payload: dict[str, Any],
-    image_paths: list[Path],
-    account_id: str,
-    timeout_seconds: float = 30.0,
+    receiver_url: str, payload: dict[str, Any], image_paths: list[Path], account_id: str, timeout_seconds: float = 30.0
 ) -> SendResult:
     files: list[tuple[str, tuple[str, bytes, str]]] = []
     for path in image_paths:
@@ -50,12 +46,7 @@ def send_payload(
     data = {"payload": json.dumps(payload, ensure_ascii=False), "account_id": account_id}
 
     try:
-        response = httpx.post(
-            f"{receiver_url}/items",
-            data=data,
-            files=files,
-            timeout=timeout_seconds,
-        )
+        response = httpx.post(f"{receiver_url}/items", data=data, files=files, timeout=timeout_seconds)
     except (httpx.TimeoutException, httpx.TransportError, httpx.HTTPError) as exc:
         return SendResult(ok=False, deduped=False, retryable=True, status_code=None, error=str(exc))
 
@@ -65,11 +56,7 @@ def send_payload(
         except ValueError:
             body = {}
         return SendResult(
-            ok=True,
-            deduped=bool(body.get("deduped")),
-            retryable=False,
-            status_code=response.status_code,
-            error=None,
+            ok=True, deduped=bool(body.get("deduped")), retryable=False, status_code=response.status_code, error=None
         )
 
     retryable = response.status_code >= 500
@@ -77,10 +64,4 @@ def send_payload(
         detail = response.json().get("detail")
     except ValueError:
         detail = response.text
-    return SendResult(
-        ok=False,
-        deduped=False,
-        retryable=retryable,
-        status_code=response.status_code,
-        error=str(detail),
-    )
+    return SendResult(ok=False, deduped=False, retryable=retryable, status_code=response.status_code, error=str(detail))

@@ -7,7 +7,7 @@ import numpy as np
 
 from src.game_data import ItemRarity, ItemType
 from src.giaoit import capture as giaoit_capture
-from src.giaoit.models import CaptureBundle, CapturedItem
+from src.giaoit.models import CapturedItem
 from src.item import Affix, AffixType, Item
 
 
@@ -114,5 +114,5 @@ def test_capture_returns_none_when_read_latest_item_raises(monkeypatch, tmp_path
     assert c.capture_item_at_cursor() is None
 
 
-def teardown_module(module) -> None:  # noqa: ANN001
+def teardown_module(module) -> None:
     importlib.reload(giaoit_capture)

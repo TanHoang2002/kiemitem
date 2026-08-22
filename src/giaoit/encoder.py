@@ -65,13 +65,7 @@ def item_hash(item: Item) -> str:
         "aspect": (
             None
             if item.aspect is None
-            else (
-                item.aspect.name,
-                item.aspect.text,
-                item.aspect.value,
-                item.aspect.min_value,
-                item.aspect.max_value,
-            )
+            else (item.aspect.name, item.aspect.text, item.aspect.value, item.aspect.min_value, item.aspect.max_value)
         ),
     }
     raw = json.dumps(payload, sort_keys=True, ensure_ascii=False, default=str)
@@ -93,12 +87,7 @@ def build_payload(bundle: CaptureBundle, meta: CaptureMeta) -> dict[str, object]
     """Assemble the full payload dict written to ``pending/<capture_id>.json``."""
     items_payload: list[dict[str, object]] = []
     for captured in bundle.items:
-        items_payload.append(
-            {
-                "image_file": captured.image_file,
-                "item": _item_to_dict(captured.item),
-            }
-        )
+        items_payload.append({"image_file": captured.image_file, "item": _item_to_dict(captured.item)})
 
     payload: dict[str, object] = {
         "schema": SCHEMA,

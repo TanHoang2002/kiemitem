@@ -72,6 +72,12 @@ class ScriptHandler:
             LOGGER.exception("GiaoIT auto-scan init failed; continuing without auto-scan")
         if self._config.general.run_vision_mode_on_startup:
             self.run_vision_mode()
+        try:
+            from src.giaoit.api import start_local_api
+
+            start_local_api(self)
+        except Exception:
+            LOGGER.exception("Failed to start local API server")
 
     def _create_vision_mode(self, vision_mode_type: VisionModeType) -> VisionMode:
         return create_vision_mode(vision_mode_type)

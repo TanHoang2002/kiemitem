@@ -25,7 +25,7 @@ class JsonLineFormatter(logging.Formatter):
             try:
                 json.dumps(value)
                 payload[key] = value
-            except (TypeError, ValueError):
+            except TypeError, ValueError:
                 payload[key] = repr(value)
         return json.dumps(payload, ensure_ascii=False)
 
@@ -39,10 +39,7 @@ def configure_logging(logs_dir: Path, level: str = "INFO") -> logging.Logger:
     logger.handlers.clear()
 
     file_handler = logging.handlers.RotatingFileHandler(
-        log_file,
-        maxBytes=10 * 1024 * 1024,
-        backupCount=10,
-        encoding="utf-8",
+        log_file, maxBytes=10 * 1024 * 1024, backupCount=10, encoding="utf-8"
     )
     file_handler.setFormatter(JsonLineFormatter())
     logger.addHandler(file_handler)

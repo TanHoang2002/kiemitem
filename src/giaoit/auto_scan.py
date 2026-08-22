@@ -29,10 +29,10 @@ _DEDUP_TTL_SECONDS = 5.0
 class AutoScanner:
     """Singleton hook subscribed to TTS events."""
 
-    _instance: "AutoScanner | None" = None
+    _instance: AutoScanner | None = None
     _instance_lock = threading.Lock()
 
-    def __new__(cls) -> "AutoScanner":
+    def __new__(cls) -> AutoScanner:
         with cls._instance_lock:
             if cls._instance is None:
                 instance = super().__new__(cls)
@@ -106,7 +106,7 @@ class AutoScanner:
                 return
 
         try:
-            import src.perception as perception
+            from src import perception
 
             item_descr = perception.read_latest_item()
         except Exception:
@@ -136,17 +136,14 @@ class AutoScanner:
 
         # Heavy work on a daemon thread so we don't block the TTS reader.
         threading.Thread(
-            target=self._capture_async,
-            args=(item_descr, digest),
-            daemon=True,
-            name="giaoit-auto-scan",
+            target=self._capture_async, args=(item_descr, digest), daemon=True, name="giaoit-auto-scan"
         ).start()
 
     def _capture_async(self, item_descr: Item, digest: str) -> None:
         try:
-            from src.giaoit.capture import _anchor_at_cursor, _read_item  # reuse helpers
-            from src.perception import capture, find_descr_with_diagnostics
+            from src.giaoit.capture import _anchor_at_cursor  # reuse helpers
             from src.giaoit.writer import write_capture
+            from src.perception import capture, find_descr_with_diagnostics
 
             anchor = _anchor_at_cursor()
             if anchor is None:
@@ -164,9 +161,7 @@ class AutoScanner:
             cropped = detection.cropped_descr if detection and detection.found else None
 
             bundle = CaptureBundle(
-                kind="single",
-                items=[CapturedItem(item=item_descr, image=cropped)],
-                source="auto_scan",
+                kind="single", items=[CapturedItem(item=item_descr, image=cropped)], source="auto_scan"
             )
             path = write_capture(bundle)
             if path is not None:

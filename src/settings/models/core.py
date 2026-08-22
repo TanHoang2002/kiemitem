@@ -132,6 +132,14 @@ class AdvancedOptionsModel(_IniBaseModel):
         title="Fast Vision Mode Coordinates",
         json_schema_extra={CATEGORY_KEY: SettingsCategory.ADVANCED},
     )
+    stash_chest_coordinates: tuple[int, int] | None = Field(
+        default=(870, 405),
+        description="The screen coordinates (X, Y) of the stash chest in pixels. "
+        "When configured, the bot will automatically move the mouse to this coordinate "
+        "and click to open the stash if it is closed. Set to blank to disable.",
+        title="Stash Chest Coordinates",
+        json_schema_extra={CATEGORY_KEY: SettingsCategory.ADVANCED},
+    )
     force_refresh_only: str = Field(
         default="ctrl+shift+f11",
         description="Hotkey to refresh the junk/favorite status of all items in your inventory/stash. A filter is not run after.",
@@ -252,9 +260,9 @@ class AdvancedOptionsModel(_IniBaseModel):
     def key_must_exist(cls, k: str) -> str:
         return validate_hotkey(k)
 
-    @field_validator("fast_vision_mode_coordinates", mode="before")
+    @field_validator("fast_vision_mode_coordinates", "stash_chest_coordinates", mode="before")
     @classmethod
-    def convert_fast_vision_mode_coordinates(cls, v: str) -> tuple[int, int] | None:
+    def convert_coordinates(cls, v: str) -> tuple[int, int] | None:
         if not v:
             return None
         if isinstance(v, str):
@@ -272,7 +280,7 @@ class AdvancedOptionsModel(_IniBaseModel):
             for x in v:
                 check_greater_than_zero(x)
             return v[0], v[1]
-        msg = "vision_mode_coordinates must be a tuple of two integers or blank"
+        msg = "Coordinates must be a tuple of two integers or blank"
         raise ValueError(msg)
 
 

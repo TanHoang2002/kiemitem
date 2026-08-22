@@ -15,10 +15,7 @@ from src.settings import get_settings
 
 LOGGER = logging.getLogger(__name__)
 
-_CATALOGS = {
-    "enUS": STRINGS_EN,
-    "viVN": STRINGS_VI,
-}
+_CATALOGS = {"enUS": STRINGS_EN, "viVN": STRINGS_VI}
 
 _override_language: str | None = None
 

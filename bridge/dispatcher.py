@@ -47,7 +47,7 @@ class Dispatcher:
     def handle(self, json_path: Path) -> None:
         try:
             payload = json.loads(json_path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
+        except OSError, json.JSONDecodeError:
             LOGGER.exception("failed to parse %s; moving to failed", json_path)
             move_to_failed(json_path.stem, json_path, [], self._config.failed_dir)
             return
@@ -86,7 +86,7 @@ class Dispatcher:
 
         try:
             payload = json.loads(json_path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
+        except OSError, json.JSONDecodeError:
             LOGGER.exception("retry payload unreadable; dropping %s", capture_id)
             self._retry_queue.remove(capture_id)
             move_to_failed(capture_id, json_path, image_paths, self._config.failed_dir)
@@ -95,47 +95,28 @@ class Dispatcher:
         self._send_or_retry(capture_id, json_path, image_paths, payload, account_id)
 
     def _send_or_retry(
-        self,
-        capture_id: str,
-        json_path: Path,
-        image_paths: list[Path],
-        payload: dict[str, Any],
-        account_id: str,
+        self, capture_id: str, json_path: Path, image_paths: list[Path], payload: dict[str, Any], account_id: str
     ) -> None:
         result: SendResult = send_payload(self._config.receiver_url, payload, image_paths, account_id)
         if result.ok:
-            LOGGER.info(
-                "capture %s sent (deduped=%s status=%s)",
-                capture_id,
-                result.deduped,
-                result.status_code,
-            )
+            LOGGER.info("capture %s sent (deduped=%s status=%s)", capture_id, result.deduped, result.status_code)
             self._retry_queue.remove(capture_id)
             move_to_sent(capture_id, json_path, image_paths, self._config.sent_dir)
             return
 
         if not result.retryable:
             LOGGER.error(
-                "capture %s failed permanently (status=%s error=%s)",
-                capture_id,
-                result.status_code,
-                result.error,
+                "capture %s failed permanently (status=%s error=%s)", capture_id, result.status_code, result.error
             )
             self._retry_queue.remove(capture_id)
             move_to_failed(capture_id, json_path, image_paths, self._config.failed_dir)
             return
 
         LOGGER.warning(
-            "capture %s retryable failure (status=%s error=%s); enqueuing",
-            capture_id,
-            result.status_code,
-            result.error,
+            "capture %s retryable failure (status=%s error=%s); enqueuing", capture_id, result.status_code, result.error
         )
         bumped = self._retry_queue.record_failure(
-            capture_id,
-            result.error or "unknown",
-            self._config.backoff_base_seconds,
-            self._config.backoff_max_seconds,
+            capture_id, result.error or "unknown", self._config.backoff_base_seconds, self._config.backoff_max_seconds
         )
         if not bumped:
             self._retry_queue.add(

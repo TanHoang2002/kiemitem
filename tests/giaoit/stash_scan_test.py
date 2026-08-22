@@ -32,8 +32,12 @@ def _fake_inventory(slots):
 
 
 def _make_item(item_type=ItemType.Helm) -> Item:
-    return Item(item_type=item_type, power=900, rarity=ItemRarity.Legendary,
-                affixes=[Affix(name="armor", value=1.0, type=AffixType.normal)])
+    return Item(
+        item_type=item_type,
+        power=900,
+        rarity=ItemRarity.Legendary,
+        affixes=[Affix(name="armor", value=1.0, type=AffixType.normal)],
+    )
 
 
 def _fake_general(**overrides) -> SimpleNamespace:
@@ -74,6 +78,7 @@ def test_read_full_stash_returns_bundle_when_stash_open(monkeypatch, tmp_path) -
     monkeypatch.setattr(s, "latest_item_lines", lambda: ("line",))
     monkeypatch.setattr(s, "latest_item_version", lambda: next(version_iter))
     import src.perception as _perception_mod
+
     monkeypatch.setattr(_perception_mod, "parse_item_text", lambda lines: next(parse_iter))
 
     detection = SimpleNamespace(found=True, cropped_descr=np.zeros((2, 2, 3), dtype=np.uint8), failure_reason=None)
@@ -119,6 +124,7 @@ def test_read_full_stash_captures_junk_and_favorite_slots(monkeypatch, tmp_path)
     monkeypatch.setattr(s, "latest_item_lines", lambda: ("line",))
     monkeypatch.setattr(s, "latest_item_version", lambda: next(version_iter))
     import src.perception as _perception_mod
+
     monkeypatch.setattr(_perception_mod, "parse_item_text", lambda lines: next(parse_iter))
     detection = SimpleNamespace(found=True, cropped_descr=None, failure_reason=None)
     monkeypatch.setattr(s, "find_descr_with_diagnostics", lambda img, anchor: detection)
@@ -151,6 +157,7 @@ def test_read_full_stash_falls_back_to_inventory(monkeypatch, tmp_path) -> None:
     monkeypatch.setattr(s, "latest_item_lines", lambda: next(tts_buffer_iter))
     monkeypatch.setattr(s, "latest_item_version", lambda: next(version_iter))
     import src.perception as _perception_mod
+
     monkeypatch.setattr(_perception_mod, "parse_item_text", lambda lines: next(parse_iter))
     detection = SimpleNamespace(found=True, cropped_descr=None, failure_reason=None)
     monkeypatch.setattr(s, "find_descr_with_diagnostics", lambda img, anchor: detection)
@@ -212,6 +219,7 @@ def test_read_one_does_not_call_junk_or_favorite_actions(monkeypatch, tmp_path) 
     monkeypatch.setattr(s, "latest_item_lines", lambda: next(tts_buffer_iter))
     monkeypatch.setattr(s, "latest_item_version", lambda: next(version_iter))
     import src.perception as _perception_mod
+
     monkeypatch.setattr(_perception_mod, "parse_item_text", lambda lines: next(parse_iter))
     detection = SimpleNamespace(found=True, cropped_descr=None, failure_reason=None)
     monkeypatch.setattr(s, "find_descr_with_diagnostics", lambda img, anchor: detection)
@@ -272,6 +280,7 @@ def test_empty_stash_tab_continues_to_next_tab(monkeypatch, tmp_path) -> None:
     monkeypatch.setattr(s, "latest_item_lines", lambda: ("line",))
     monkeypatch.setattr(s, "latest_item_version", lambda: next(version_iter))
     import src.perception as _perception_mod
+
     monkeypatch.setattr(_perception_mod, "parse_item_text", lambda lines: next(parse_iter))
     detection = SimpleNamespace(found=True, cropped_descr=None, failure_reason=None)
     monkeypatch.setattr(s, "find_descr_with_diagnostics", lambda img, anchor: detection)

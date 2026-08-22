@@ -37,14 +37,7 @@ def iso_env(tmp_path, monkeypatch):
     importlib.reload(bridge_watcher)
     importlib.reload(bridge_retry_queue)
     cfg = bridge_config.load_config()
-    for path in (
-        cfg.pending_dir,
-        cfg.sent_dir,
-        cfg.failed_dir,
-        cfg.received_dir,
-        cfg.logs_dir,
-        cfg.state_dir,
-    ):
+    for path in (cfg.pending_dir, cfg.sent_dir, cfg.failed_dir, cfg.received_dir, cfg.logs_dir, cfg.state_dir):
         path.mkdir(parents=True, exist_ok=True)
     return cfg
 
@@ -85,11 +78,7 @@ def client(iso_env, monkeypatch):
         except ValueError:
             detail = response.text
         return bridge_sender.SendResult(
-            ok=False,
-            deduped=False,
-            retryable=retryable,
-            status_code=response.status_code,
-            error=str(detail),
+            ok=False, deduped=False, retryable=retryable, status_code=response.status_code, error=str(detail)
         )
 
     monkeypatch.setattr(bridge_dispatcher, "send_payload", _fake_send)
@@ -105,7 +94,10 @@ def _make_payload(capture_id: str, kind: str = "single", items: int = 1) -> dict
         "machine_id": "m1",
         "source": "f2_key" if kind == "single" else "f4_key",
         "items": [
-            {"image_file": f"{capture_id}_{i:03d}.png" if kind == "stash" else f"{capture_id}.png", "item": {"item_type": "helm"}}
+            {
+                "image_file": f"{capture_id}_{i:03d}.png" if kind == "stash" else f"{capture_id}.png",
+                "item": {"item_type": "helm"},
+            }
             for i in range(items)
         ],
     }
@@ -212,6 +204,7 @@ def test_receiver_5xx_triggers_retry(iso_env, monkeypatch) -> None:
 
     def _fake_send(receiver_url, payload, image_paths, account_id, timeout_seconds=30.0):
         from bridge.sender import SendResult
+
         return SendResult(ok=False, deduped=False, retryable=True, status_code=503, error="unavailable")
 
     monkeypatch.setattr(bridge_dispatcher, "send_payload", _fake_send)
@@ -236,6 +229,7 @@ def test_receiver_4xx_moves_to_failed(iso_env, monkeypatch) -> None:
 
     def _fake_send(receiver_url, payload, image_paths, account_id, timeout_seconds=30.0):
         from bridge.sender import SendResult
+
         return SendResult(ok=False, deduped=False, retryable=False, status_code=400, error="bad payload")
 
     monkeypatch.setattr(bridge_dispatcher, "send_payload", _fake_send)
@@ -291,8 +285,7 @@ def test_single_capture_without_accounts_falls_back(iso_env, monkeypatch, client
     """When accounts.txt is missing and no confirm_fn set, dispatcher falls back."""
     monkeypatch.setattr(bridge_accounts, "DEFAULT_ACCOUNTS_FILE", iso_env.capture_dir / "nope.txt")
     dispatcher = bridge_dispatcher.Dispatcher(
-        config=iso_env,
-        retry_queue=bridge_retry_queue.RetryQueue(iso_env.retry_queue_file),
+        config=iso_env, retry_queue=bridge_retry_queue.RetryQueue(iso_env.retry_queue_file)
     )
     dispatcher.reload_accounts()
 

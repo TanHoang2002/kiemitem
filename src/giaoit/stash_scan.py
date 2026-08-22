@@ -19,7 +19,13 @@ from src.automation import character_inventory, stash_inventory
 from src.game_data import ItemType
 from src.giaoit.models import CaptureBundle, CapturedItem
 from src.item import AffixType
-from src.perception import capture, find_descr_with_diagnostics, latest_item_lines, latest_item_version, read_latest_item
+from src.perception import (
+    capture,
+    find_descr_with_diagnostics,
+    latest_item_lines,
+    latest_item_version,
+    read_latest_item,
+)
 from src.settings import get_settings
 
 LOGGER = logging.getLogger(__name__)
@@ -61,13 +67,9 @@ _TOOLTIP_STABLE_DELAY_SECONDS = 0.15
 
 def _item_signature(item) -> tuple:
     """Stable identity for an Item — excludes object identity so repeated reads
-    of the same logical item produce the same signature."""
-    return (
-        item.item_type,
-        item.name,
-        item.power,
-        tuple((a.name, a.value, a.type) for a in item.affixes),
-    )
+    of the same logical item produce the same signature.
+    """
+    return (item.item_type, item.name, item.power, tuple((a.name, a.value, a.type) for a in item.affixes))
 
 
 def _snapshot_tts_lines() -> tuple[str, ...]:
@@ -79,11 +81,7 @@ def _snapshot_tts_lines() -> tuple[str, ...]:
         return ()
 
 
-def _wait_for_tts_update(
-    pre_hover_version: int,
-    slot_center: tuple[int, int],
-    previous_signature: tuple | None,
-):
+def _wait_for_tts_update(pre_hover_version: int, slot_center: tuple[int, int], previous_signature: tuple | None):
     """Wait until the TTS publisher flushes a fresh item (``latest_item_version``
     bumps past ``pre_hover_version``), or skip/timeout.
 
@@ -127,11 +125,7 @@ def _wait_for_tts_update(
         last_lines_len = sum(len(line) for line in latest_item_lines())
         if time.monotonic() > skip_deadline:
             elapsed = time.monotonic() - (skip_deadline - _TTS_SETTLE_SKIP_AFTER_STALE_SECONDS)
-            LOGGER.info(
-                "Slot at %s: no TTS update after %.2fs — treating as empty",
-                slot_center,
-                elapsed,
-            )
+            LOGGER.info("Slot at %s: no TTS update after %.2fs — treating as empty", slot_center, elapsed)
             return None, "skip"
         time.sleep(_TTS_SETTLE_POLL_SECONDS)
     LOGGER.warning(
@@ -212,11 +206,7 @@ def _capture_stable_tooltip(anchor: tuple[int, int], item_descr=None):
         # Frames disagree but both succeeded — accept the first frame anyway.
         # A slightly mid-animation tooltip image is still useful for downstream
         # pricing; dropping it loses data we can't recover later.
-        LOGGER.debug(
-            "tooltip unstable at anchor %s (score=%.3f); keeping first frame anyway",
-            anchor,
-            score,
-        )
+        LOGGER.debug("tooltip unstable at anchor %s (score=%.3f); keeping first frame anyway", anchor, score)
         return first_detection, first_crop
     except Exception:
         LOGGER.exception("tooltip capture failed at anchor %s", anchor)
@@ -360,11 +350,7 @@ def _content_aware_fallback_crop(img, anchor: tuple[int, int], item_descr=None):
             getattr(item_descr, "item_type", None),
         )
         return (
-            DescrDetection(
-                found=True,
-                cropped_descr=img,
-                crop_roi=[0, 0, int(img.shape[1]), int(img.shape[0])],
-            ),
+            DescrDetection(found=True, cropped_descr=img, crop_roi=[0, 0, int(img.shape[1]), int(img.shape[0])]),
             img,
         )
     except Exception:
@@ -408,9 +394,7 @@ def _read_one(inventory, item_slot, previous_signature: tuple | None) -> Capture
 
     if stable_crop is None:
         LOGGER.debug(
-            "no stable tooltip image at %s for item_type=%s; recording text only",
-            anchor,
-            item_descr.item_type,
+            "no stable tooltip image at %s for item_type=%s; recording text only", anchor, item_descr.item_type
         )
     return CapturedItem(item=item_descr, image=stable_crop)
 
@@ -426,11 +410,7 @@ def _warn_if_advanced_tooltip_likely_off(items: list[CapturedItem]) -> None:
     affixed_items = [ci for ci in items if ci.item.affixes]
     if len(affixed_items) < 3:
         return
-    all_ga = [
-        ci
-        for ci in affixed_items
-        if all(affix.type == AffixType.greater for affix in ci.item.affixes)
-    ]
+    all_ga = [ci for ci in affixed_items if all(affix.type == AffixType.greater for affix in ci.item.affixes)]
     if len(all_ga) / len(affixed_items) > _ALL_GA_WARNING_RATIO:
         LOGGER.warning(
             "%d out of %d items had all greater affixes — Advanced Tooltip Information "
@@ -461,8 +441,7 @@ def _scan_slots(inventory, slots, captured: list[CapturedItem]) -> bool:
         item = _read_one(inventory, slot, previous_signature)
         if item is None:
             LOGGER.warning(
-                "Slot #%d at %s produced no item — skipped silently. "
-                "If this slot had an item, TTS pipe missed it.",
+                "Slot #%d at %s produced no item — skipped silently. If this slot had an item, TTS pipe missed it.",
                 index,
                 slot.center,
             )
@@ -494,10 +473,29 @@ def read_full_stash() -> CaptureBundle | None:
     stash = stash_inventory()
     inv = character_inventory()
     config = get_settings().general
+    adv_config = get_settings().advanced_options
 
     captured: list[CapturedItem] = []
     tabs_scanned: list[int] = []
+
     stash_open = stash.is_open()
+    if not stash_open and adv_config.stash_chest_coordinates is not None:
+        cx, cy = adv_config.stash_chest_coordinates
+        LOGGER.info("Stash closed. Moving mouse to chest at window coordinate (%d, %d) to open it", cx, cy)
+        from src.automation.mouse import Mouse
+        from src.perception import window_to_monitor
+
+        # Default Cerrigar FHD stash coordinate (870, 405) uses (30, 25) randomization
+        # to match the bounding box X: 840-900 and Y: 380-430.
+        rand_val = (30, 25) if cx == 870 and cy == 405 else 10
+        mx, my = window_to_monitor((cx, cy))
+        Mouse.move(mx, my, randomize=rand_val)
+        Mouse.click("left")
+        time.sleep(1.0)
+        stash_open = stash.is_open()
+        if not stash_open:
+            LOGGER.warning("Clicking stash chest did not open stash UI")
+
     cancelled = False
 
     if stash_open:
@@ -521,12 +519,7 @@ def read_full_stash() -> CaptureBundle | None:
             if not _scan_slots(stash, occupied, captured):
                 cancelled = True
                 break
-            LOGGER.info(
-                "Stash tab %s done: %d/%d items captured",
-                tab,
-                len(captured) - tab_before,
-                len(occupied),
-            )
+            LOGGER.info("Stash tab %s done: %d/%d items captured", tab, len(captured) - tab_before, len(occupied))
 
         if not cancelled and captured:
             # Then character inventory — same as run_loot_filter does after stash.
@@ -557,12 +550,7 @@ def read_full_stash() -> CaptureBundle | None:
     if not cancelled:
         _warn_if_advanced_tooltip_likely_off(captured)
 
-    return CaptureBundle(
-        kind="stash",
-        items=captured,
-        source="f4_key",
-        stash_tabs_scanned=tabs_scanned,
-    )
+    return CaptureBundle(kind="stash", items=captured, source="f4_key", stash_tabs_scanned=tabs_scanned)
 
 
 def move_pointer_inv_to_origin() -> None:
@@ -593,8 +581,7 @@ def search_and_mark(search_params, callback=None) -> list:
     search_name = search_params.get("name", "")
     aspect_min = search_params.get("min_value")
     aspect_max = search_params.get("max_value")
-    from src.automation import move_pointer, press_key, release_key
-    from src.perception import read_latest_item
+    from src.automation import press_key, release_key
 
     _reset_cancel()
     stash = stash_inventory()
@@ -624,8 +611,7 @@ def search_and_mark(search_params, callback=None) -> list:
                     continue
                 return []
             has_ga = any(
-                getattr(a, "name", "") == exp.name
-                and getattr(getattr(a, "type", None), "name", "") == "greater"
+                getattr(a, "name", "") == exp.name and getattr(getattr(a, "type", None), "name", "") == "greater"
                 for a in matched
             )
             if not has_ga:
@@ -709,7 +695,13 @@ def search_and_mark(search_params, callback=None) -> list:
                             pct = aspect_val
                         LOGGER.info(
                             "  aspect check: %s value=%s range=[%s-%s] roll=%.1f%% (min=%s max=%s)",
-                            aspect.name, aspect_val, aspect.min_value, aspect.max_value, pct, aspect_min, aspect_max,
+                            aspect.name,
+                            aspect_val,
+                            aspect.min_value,
+                            aspect.max_value,
+                            pct,
+                            aspect_min,
+                            aspect_max,
                         )
                         if aspect_min is not None and pct < aspect_min:
                             is_match = False
@@ -763,6 +755,26 @@ def search_and_mark(search_params, callback=None) -> list:
             callback(scanned, matches)
 
     stash_open = stash.is_open()
+    adv_config = get_settings().advanced_options
+    if not stash_open and adv_config.stash_chest_coordinates is not None:
+        cx, cy = adv_config.stash_chest_coordinates
+        LOGGER.info(
+            "Stash closed. Moving mouse to chest at window coordinate (%d, %d) to open it for affix search", cx, cy
+        )
+        from src.automation.mouse import Mouse
+        from src.perception import window_to_monitor
+
+        # Default Cerrigar FHD stash coordinate (870, 405) uses (30, 25) randomization
+        # to match the bounding box X: 840-900 and Y: 380-430.
+        rand_val = (30, 25) if cx == 870 and cy == 405 else 10
+        mx, my = window_to_monitor((cx, cy))
+        Mouse.move(mx, my, randomize=rand_val)
+        Mouse.click("left")
+        time.sleep(1.0)
+        stash_open = stash.is_open()
+        if not stash_open:
+            LOGGER.warning("Clicking stash chest did not open stash UI")
+
     LOGGER.info("Affix-search config: tabs=%s stash_open=%s", config.check_chest_tabs, stash_open)
 
     if stash_open:

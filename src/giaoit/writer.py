@@ -23,10 +23,7 @@ from src.giaoit.paths import pending_dir
 
 LOGGER = logging.getLogger(__name__)
 
-_FIXED_NAMES = {
-    "single": "latest_single",
-    "stash": "latest_stash",
-}
+_FIXED_NAMES = {"single": "latest_single", "stash": "latest_stash"}
 
 
 def _new_meta(fixed_id: str) -> CaptureMeta:
@@ -95,7 +92,9 @@ def _dedup_items(items: list) -> list:
             seen.add(digest)
             unique.append(captured)
     if len(unique) < len(items):
-        LOGGER.info("Dedup: %d items → %d unique (%d duplicates removed)", len(items), len(unique), len(items) - len(unique))
+        LOGGER.info(
+            "Dedup: %d items → %d unique (%d duplicates removed)", len(items), len(unique), len(items) - len(unique)
+        )
     return unique
 
 
@@ -136,10 +135,5 @@ def write_capture(bundle: CaptureBundle) -> Path | None:
         LOGGER.exception("Failed to write capture %s", meta.capture_id)
         return None
 
-    LOGGER.info(
-        "GiaoIT capture written: %s (kind=%s, items=%d)",
-        json_path,
-        bundle.kind,
-        len(bundle.items),
-    )
+    LOGGER.info("GiaoIT capture written: %s (kind=%s, items=%d)", json_path, bundle.kind, len(bundle.items))
     return json_path

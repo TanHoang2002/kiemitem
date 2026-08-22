@@ -10,5 +10,5 @@ def test_module_imports() -> None:
     assert hasattr(giaoit_affix_search, "AffixSearchRow")
 
 
-def teardown_module(module) -> None:  # noqa: ANN001
+def teardown_module(module) -> None:
     importlib.reload(giaoit_affix_search)

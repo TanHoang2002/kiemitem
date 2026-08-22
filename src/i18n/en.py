@@ -29,9 +29,7 @@ STRINGS_EN: dict[str, str] = {
         "d4lf could not be restarted automatically. Please restart it manually."
     ),
     "Error validating value": "Error validating value",
-    "Your value has been reset to its previous version.": (
-        "Your value has been reset to its previous version."
-    ),
+    "Your value has been reset to its previous version.": ("Your value has been reset to its previous version."),
     "Set Hotkey": "Set Hotkey",
     "Press the key or combination of keys you\nwant to use as a hotkey, then click save.": (
         "Press the key or combination of keys you\nwant to use as a hotkey, then click save."
@@ -86,9 +84,7 @@ STRINGS_EN: dict[str, str] = {
     "Are you sure you want to permanently delete the profile '{name}'?": (
         "Are you sure you want to permanently delete the profile '{name}'?"
     ),
-    "No Profiles found. Please import a profile below.": (
-        "No Profiles found. Please import a profile below."
-    ),
+    "No Profiles found. Please import a profile below.": ("No Profiles found. Please import a profile below."),
     "Last Modified:": "Last Modified:",
     "Items:": "Items:",
     "Affix Filters:": "Affix Filters:",
@@ -315,9 +311,7 @@ STRINGS_EN: dict[str, str] = {
     "Refresh Timers Now": "Refresh Timers Now",
     "Lock Position": "Lock Position",
     "Close Overlay": "Close Overlay",
-    "DRAG ACROSS YOUR EXPERIENCE BAR\n(Escape to cancel)": (
-        "DRAG ACROSS YOUR EXPERIENCE BAR\n(Escape to cancel)"
-    ),
+    "DRAG ACROSS YOUR EXPERIENCE BAR\n(Escape to cancel)": ("DRAG ACROSS YOUR EXPERIENCE BAR\n(Escape to cancel)"),
     # ── LOGGER.info user-facing messages (handler.py, loot/, etc.) ─────────
     "Reloaded hotkeys from updated settings": "Reloaded hotkeys from updated settings",
     "Reloaded language assets for %s": "Reloaded language assets for %s",

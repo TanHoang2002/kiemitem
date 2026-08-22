@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING
 
 from src.automation import pointer_position
 from src.giaoit.models import CaptureBundle, CapturedItem
-from src.perception import capture, monitor_to_window, read_latest_item
+from src.perception import monitor_to_window, read_latest_item
 
 if TYPE_CHECKING:
     from src.item.models import Item
@@ -68,18 +68,11 @@ def capture_item_at_cursor() -> CaptureBundle | None:
         LOGGER.exception("tooltip capture failed at anchor %s", anchor)
         cropped = None
     if cropped is None:
-        LOGGER.warning(
-            "No tooltip image captured at cursor anchor %s — recording item text only",
-            anchor,
-        )
+        LOGGER.warning("No tooltip image captured at cursor anchor %s — recording item text only", anchor)
 
     item = _read_item()
     if item is None:
         LOGGER.warning("No TTS item text available; cannot capture")
         return None
 
-    return CaptureBundle(
-        kind="single",
-        items=[CapturedItem(item=item, image=cropped)],
-        source="f2_key",
-    )
+    return CaptureBundle(kind="single", items=[CapturedItem(item=item, image=cropped)], source="f2_key")

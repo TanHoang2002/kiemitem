@@ -7,7 +7,7 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
-DEFAULT_RECEIVER_URL = "http://127.0.0.1:8000"
+DEFAULT_RECEIVER_URL = "http://192.168.2.115:8000"
 DEFAULT_CAPTURE_DIR = Path.home() / ".giaoit"
 DEFAULT_POLL_INTERVAL_SECONDS = 0.5
 DEFAULT_STABILITY_SECONDS = 0.3

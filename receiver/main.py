@@ -93,7 +93,7 @@ def get_warehouse_summary() -> dict[str, Any]:
     import re
     from collections import Counter
     from datetime import datetime
-    
+
     storage = _storage()
     # Group records by account_id, keeping the latest one by received_at
     latest_records = {}
@@ -105,25 +105,25 @@ def get_warehouse_summary() -> dict[str, Any]:
             if not acc_id:
                 continue
             received_at = record.get("received_at", "")
-            
+
             if acc_id not in latest_records or received_at > latest_records[acc_id].get("received_at", ""):
                 latest_records[acc_id] = record
-                
+
     summary = {}
     for acc_id, record in latest_records.items():
         payload_data = record.get("payload", {})
         items_list = payload_data.get("items", [])
         counts = Counter()
-        
+
         for item_entry in items_list:
             item = item_entry.get("item", {})
             orig_name = str(item.get("original_name", "")).lower()
             name = str(item.get("name", "")).lower()
-            
+
             # Extract stack size
             match = re.search(r"\((\d+)\)", orig_name)
             quantity = int(match.group(1)) if match else 1
-            
+
             # Match categories
             if "greater lair" in orig_name or "greater lair" in name:
                 counts["Greater Lair Key"] += quantity
@@ -137,12 +137,26 @@ def get_warehouse_summary() -> dict[str, Any]:
             elif "crux" in orig_name or "crux" in name:
                 counts["Crux of the False Prophet"] += quantity
             elif "grand" in orig_name or "grand" in name:
-                gem_type = next((g for g in ["skull", "ruby", "sapphire", "topaz", "emerald", "diamond", "amethyst"] if g in orig_name), "other")
+                gem_type = next(
+                    (
+                        g
+                        for g in ["skull", "ruby", "sapphire", "topaz", "emerald", "diamond", "amethyst"]
+                        if g in orig_name
+                    ),
+                    "other",
+                )
                 counts[f"Grand {gem_type.capitalize()}"] += quantity
             elif ("flawless" in orig_name and "horadric" in orig_name) or ("flawless" in name and "horadric" in name):
-                gem_type = next((g for g in ["skull", "ruby", "sapphire", "topaz", "emerald", "diamond", "amethyst"] if g in orig_name), "other")
+                gem_type = next(
+                    (
+                        g
+                        for g in ["skull", "ruby", "sapphire", "topaz", "emerald", "diamond", "amethyst"]
+                        if g in orig_name
+                    ),
+                    "other",
+                )
                 counts[f"Flawless {gem_type.capitalize()}"] += quantity
-                
+
         # Format the time
         received_at_str = record.get("received_at", "")
         try:
@@ -156,12 +170,9 @@ def get_warehouse_summary() -> dict[str, Any]:
             last_updated = dt.strftime("%Y-%m-%d %H:%M:%S UTC")
         except Exception:
             last_updated = received_at_str
-            
-        summary[acc_id] = {
-            "last_updated": last_updated,
-            "currencies": dict(counts)
-        }
-        
+
+        summary[acc_id] = {"last_updated": last_updated, "currencies": dict(counts)}
+
     return summary
 
 

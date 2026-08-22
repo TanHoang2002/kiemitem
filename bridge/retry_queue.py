@@ -41,7 +41,7 @@ class RetryQueue:
             return []
         try:
             return json.loads(self._path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
+        except OSError, json.JSONDecodeError:
             LOGGER.exception("retry_queue unreadable at %s; starting empty", self._path)
             return []
 
@@ -50,14 +50,7 @@ class RetryQueue:
         tmp.write_text(json.dumps(self._entries, indent=2, ensure_ascii=False), encoding="utf-8")
         tmp.replace(self._path)
 
-    def add(
-        self,
-        capture_id: str,
-        json_path: Path,
-        image_paths: list[Path],
-        account_id: str | None,
-        kind: str,
-    ) -> None:
+    def add(self, capture_id: str, json_path: Path, image_paths: list[Path], account_id: str | None, kind: str) -> None:
         entry = {
             "capture_id": capture_id,
             "json_path": str(json_path),

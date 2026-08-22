@@ -34,7 +34,6 @@ from src.i18n import tr
 from src.profiles.editor.dialogs import IgnoreScrollWheelComboBox, IgnoreScrollWheelSpinBox
 
 if TYPE_CHECKING:
-    from src.item.data.affix import Affix
     from src.item.models import Item
 
 LOGGER = logging.getLogger(__name__)
@@ -90,7 +89,7 @@ class AffixSearchRow(QWidget):
 
         layout.addStretch()
 
-    def to_filter(self) -> tuple["AffixFilterModel | None", str]:
+    def to_filter(self) -> tuple[AffixFilterModel | None, str]:
         text = self.name_combo.currentText().strip()
         if not text:
             return None, "empty"
@@ -114,10 +113,7 @@ class AffixSearchRow(QWidget):
         from src.profiles.affixes import AffixFilterModel
 
         model = AffixFilterModel(
-            name=name,
-            want_greater=self.greater_checkbox.isChecked(),
-            min_value=min_v,
-            max_value=max_v,
+            name=name, want_greater=self.greater_checkbox.isChecked(), min_value=min_v, max_value=max_v
         )
         return model, ""
 
@@ -125,7 +121,7 @@ class AffixSearchRow(QWidget):
 class _OperatorButton(QPushButton):
     """Toggle button between AND/OR. Clicking it flips the mode and syncs all siblings."""
 
-    def __init__(self, panel: "AffixSearchPanel", parent=None):
+    def __init__(self, panel: AffixSearchPanel, parent=None):
         super().__init__("AND", parent)
         self._panel = panel
         self.setFixedWidth(60)
@@ -180,9 +176,7 @@ class AffixSearchPanel(QWidget):
         top_bar.addWidget(self.type_combo)
         layout.addLayout(top_bar)
 
-        self.help_label = QLabel(
-            tr("Enter affixes. Click AND/OR between rows. Items matching appear below.")
-        )
+        self.help_label = QLabel(tr("Enter affixes. Click AND/OR between rows. Items matching appear below."))
         self.help_label.setWordWrap(True)
         self.help_label.setStyleSheet("color: #888; font-style: italic;")
         layout.addWidget(self.help_label)
@@ -316,16 +310,13 @@ class AffixSearchPanel(QWidget):
         if search_type == "Affix":
             self.affix_section.setVisible(True)
             self.simple_section.setVisible(False)
-            self.help_label.setText(
-                tr("Enter affixes. Click AND/OR between rows. Items matching appear below.")
-            )
+            self.help_label.setText(tr("Enter affixes. Click AND/OR between rows. Items matching appear below."))
         else:
             self.affix_section.setVisible(False)
             self.simple_section.setVisible(True)
             # Show Min/Max only for Aspect search (aspect has value range)
             show_range = search_type == "Aspect"
-            for w in (self.aspect_min_label, self.aspect_min_edit,
-                      self.aspect_max_label, self.aspect_max_edit):
+            for w in (self.aspect_min_label, self.aspect_min_edit, self.aspect_max_label, self.aspect_max_edit):
                 w.setVisible(show_range)
             if search_type == "Aspect":
                 self.help_label.setText(tr("Enter aspect name (legendary + unique). Optional Min/Max % roll filter."))
@@ -403,7 +394,7 @@ class AffixSearchPanel(QWidget):
             row.setParent(None)
             row.deleteLater()
 
-    def _build_pool(self) -> tuple["AffixFilterCountModel | None", str]:
+    def _build_pool(self) -> tuple[AffixFilterCountModel | None, str]:
         from src.profiles.affixes import AffixFilterCountModel
 
         affixes: list = []
@@ -436,7 +427,8 @@ class AffixSearchPanel(QWidget):
             search_params = {"type": "affix", "pool": pool}
             LOGGER.info(
                 "Search rule: mode=%s, count=%d, affixes=%s",
-                pool.match_mode, len(pool.count),
+                pool.match_mode,
+                len(pool.count),
                 [(c.name, c.want_greater, c.min_value, c.max_value) for c in pool.count],
             )
         else:
@@ -513,9 +505,7 @@ class AffixSearchPanel(QWidget):
                     worker = getattr(widget, "worker", None)
                     handler = getattr(worker, "script_handler", None) if worker else None
                     if handler is not None and hasattr(handler, "_start_or_stop_loot_interaction_thread"):
-                        handler._start_or_stop_loot_interaction_thread(
-                            _run_via_handler, (search_params, _progress)
-                        )
+                        handler._start_or_stop_loot_interaction_thread(_run_via_handler, (search_params, _progress))
                         return
         except Exception:
             LOGGER.debug("Could not find ScriptHandler; falling back to raw thread")

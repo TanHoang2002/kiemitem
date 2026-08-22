@@ -19,16 +19,17 @@ def _default_received_dir() -> Path:
 def _extract_currencies(payload: dict[str, Any]) -> dict[str, int]:
     import re
     from collections import Counter
+
     counts = Counter()
     items_list = payload.get("items", [])
     for item_entry in items_list:
         item = item_entry.get("item", {})
         orig_name = str(item.get("original_name", "")).lower()
         name = str(item.get("name", "")).lower()
-        
+
         match = re.search(r"\((\d+)\)", orig_name)
         quantity = int(match.group(1)) if match else 1
-        
+
         if "greater lair" in orig_name or "greater lair" in name:
             counts["Greater Lair Key"] += quantity
         elif "lair" in orig_name or "lair" in name:
@@ -41,10 +42,16 @@ def _extract_currencies(payload: dict[str, Any]) -> dict[str, int]:
         elif "crux" in orig_name or "crux" in name:
             counts["Crux of the False Prophet"] += quantity
         elif "grand" in orig_name or "grand" in name:
-            gem_type = next((g for g in ["skull", "ruby", "sapphire", "topaz", "emerald", "diamond", "amethyst"] if g in orig_name), "other")
+            gem_type = next(
+                (g for g in ["skull", "ruby", "sapphire", "topaz", "emerald", "diamond", "amethyst"] if g in orig_name),
+                "other",
+            )
             counts[f"Grand {gem_type.capitalize()}"] += quantity
         elif ("flawless" in orig_name and "horadric" in orig_name) or ("flawless" in name and "horadric" in name):
-            gem_type = next((g for g in ["skull", "ruby", "sapphire", "topaz", "emerald", "diamond", "amethyst"] if g in orig_name), "other")
+            gem_type = next(
+                (g for g in ["skull", "ruby", "sapphire", "topaz", "emerald", "diamond", "amethyst"] if g in orig_name),
+                "other",
+            )
             counts[f"Flawless {gem_type.capitalize()}"] += quantity
     return dict(counts)
 
@@ -59,7 +66,7 @@ class Storage:
         self._lock = threading.Lock()
         self._received_dir = received_dir or _default_received_dir()
         self._received_dir.mkdir(parents=True, exist_ok=True)
-        
+
         # Load existing records from disk for persistence
         for f in self._received_dir.glob("*.json"):
             if f.name == "warehouse_history.json":
@@ -74,7 +81,7 @@ class Storage:
                         self._hash_index[item_hash_value] = capture_id
             except Exception:
                 continue
-                
+
         # Load warehouse history
         history_file = self._received_dir / "warehouse_history.json"
         if history_file.exists():
@@ -90,9 +97,7 @@ class Storage:
         except OSError:
             pass
 
-    def put(
-        self, capture_id: str, payload: dict[str, Any], account_id: str
-    ) -> tuple[dict[str, Any], bool, bool]:
+    def put(self, capture_id: str, payload: dict[str, Any], account_id: str) -> tuple[dict[str, Any], bool, bool]:
         """Insert or return existing.
 
         Returns ``(record, deduped_by_capture_id, deduped_by_hash)``. Only one
@@ -114,14 +119,14 @@ class Storage:
             # If kind is stash, compute differences from the latest stash of the same account_id
             if payload.get("kind") == "stash":
                 new_counts = _extract_currencies(payload)
-                
+
                 # Find the latest stash record for this account_id
                 latest_stash = None
                 for rec in self._records.values():
                     if rec.get("kind") == "stash" and rec.get("account_id") == account_id:
                         if latest_stash is None or rec.get("received_at", "") > latest_stash.get("received_at", ""):
                             latest_stash = rec
-                            
+
                 if latest_stash is not None:
                     old_counts = _extract_currencies(latest_stash.get("payload", {}))
                     all_keys = set(new_counts.keys()) | set(old_counts.keys())
@@ -136,7 +141,7 @@ class Storage:
                                 "item_name": key,
                                 "difference": diff,
                                 "old_qty": old_qty,
-                                "new_qty": new_qty
+                                "new_qty": new_qty,
                             }
                             self._history.insert(0, history_entry)
                     self._save_history_to_disk()
