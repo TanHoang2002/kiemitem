@@ -386,7 +386,7 @@ class ScriptHandler:
 
         self._start_or_stop_loot_interaction_thread(run_capture_single, ())
 
-    def capture_stash_full(self):
+    def capture_stash_full(self, account_id: str | None = None):
         """GiaoIT V1 — F4: read every item in stash/inventory and write a bundle.
 
         Toggle behaviour: pressing F4 again while a scan is running cancels it
@@ -396,7 +396,7 @@ class ScriptHandler:
         Refuses to start in vision_mode_only because scanning requires moving
         the mouse over each slot (violates "look, don't touch").
         """
-        LOGGER.info("GiaoIT capture_stash (F4) hotkey fired")
+        LOGGER.info("GiaoIT capture_stash (F4) hotkey fired for account_id=%s", account_id)
         if self.loot_interaction_thread is not None and self.loot_interaction_thread.is_alive():
             # Toggle off — request cancel so the scan stops at the next slot
             # boundary. PyThreadState_SetAsyncExc can't interrupt time.sleep,
@@ -416,14 +416,14 @@ class ScriptHandler:
             return
         from src.giaoit.runner import run_capture_stash
 
-        self._start_or_stop_loot_interaction_thread(run_capture_stash, ())
+        self._start_or_stop_loot_interaction_thread(run_capture_stash, (account_id,))
 
-    def capture_currency(self):
+    def capture_currency(self, account_id: str | None = None):
         """GiaoIT — F6: read every item in stash/inventory, write a bundle, and print currency counts.
 
         Toggle behaviour: pressing F6 again while a scan is running cancels it gracefully.
         """
-        LOGGER.info("GiaoIT capture_currency (F6) hotkey fired")
+        LOGGER.info("GiaoIT capture_currency (F6) hotkey fired for account_id=%s", account_id)
         if self.loot_interaction_thread is not None and self.loot_interaction_thread.is_alive():
             try:
                 from src.giaoit.stash_scan import request_cancel
@@ -438,4 +438,4 @@ class ScriptHandler:
             return
         from src.giaoit.runner import run_capture_currency
 
-        self._start_or_stop_loot_interaction_thread(run_capture_currency, ())
+        self._start_or_stop_loot_interaction_thread(run_capture_currency, (account_id,))

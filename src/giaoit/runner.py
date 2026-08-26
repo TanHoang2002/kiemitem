@@ -29,7 +29,7 @@ def run_capture_single() -> None:
     write_capture(bundle)
 
 
-def run_capture_stash() -> None:
+def run_capture_stash(account_id: str | None = None) -> None:
     """F4: read every item in the open stash tabs."""
     if not is_capture_enabled():
         LOGGER.info("GiaoIT capture_stash pressed but capture_mode is disabled; ignoring")
@@ -40,10 +40,10 @@ def run_capture_stash() -> None:
         LOGGER.warning("GiaoIT capture_stash produced no bundle")
         return
 
-    write_capture(bundle)
+    write_capture(bundle, account_id=account_id)
 
 
-def run_capture_currency() -> None:
+def run_capture_currency(account_id: str | None = None) -> None:
     """F6: read every item in stash, write bundle, and print/log currency counts."""
     if not is_capture_enabled():
         LOGGER.info("GiaoIT capture_currency pressed but capture_mode is disabled; ignoring")
@@ -54,7 +54,7 @@ def run_capture_currency() -> None:
         LOGGER.warning("GiaoIT capture_currency produced no bundle")
         return
 
-    json_path = write_capture(bundle)
+    json_path = write_capture(bundle, account_id=account_id)
     if json_path is None:
         return
 

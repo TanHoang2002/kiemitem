@@ -481,13 +481,19 @@ def read_full_stash() -> CaptureBundle | None:
     stash_open = stash.is_open()
     if not stash_open and adv_config.stash_chest_coordinates is not None:
         cx, cy = adv_config.stash_chest_coordinates
+        base_cx, base_cy = cx, cy
+        from src.settings import get_ui_coordinates
+        win_w, win_h = get_ui_coordinates().pos.window_dimensions
+        if win_w > 0 and win_h > 0 and (win_w != 1920 or win_h != 1080):
+            cx = int(cx * win_w / 1920)
+            cy = int(cy * win_h / 1080)
         LOGGER.info("Stash closed. Moving mouse to chest at window coordinate (%d, %d) to open it", cx, cy)
         from src.automation.mouse import Mouse
         from src.perception import window_to_monitor
 
         # Default Cerrigar FHD stash coordinate (870, 405) uses (30, 25) randomization
         # to match the bounding box X: 840-900 and Y: 380-430.
-        rand_val = (30, 25) if cx == 870 and cy == 405 else 10
+        rand_val = (30, 25) if base_cx == 870 and base_cy == 405 else 10
         mx, my = window_to_monitor((cx, cy))
         Mouse.move(mx, my, randomize=rand_val)
         Mouse.click("left")
@@ -758,6 +764,12 @@ def search_and_mark(search_params, callback=None) -> list:
     adv_config = get_settings().advanced_options
     if not stash_open and adv_config.stash_chest_coordinates is not None:
         cx, cy = adv_config.stash_chest_coordinates
+        base_cx, base_cy = cx, cy
+        from src.settings import get_ui_coordinates
+        win_w, win_h = get_ui_coordinates().pos.window_dimensions
+        if win_w > 0 and win_h > 0 and (win_w != 1920 or win_h != 1080):
+            cx = int(cx * win_w / 1920)
+            cy = int(cy * win_h / 1080)
         LOGGER.info(
             "Stash closed. Moving mouse to chest at window coordinate (%d, %d) to open it for affix search", cx, cy
         )
@@ -766,7 +778,7 @@ def search_and_mark(search_params, callback=None) -> list:
 
         # Default Cerrigar FHD stash coordinate (870, 405) uses (30, 25) randomization
         # to match the bounding box X: 840-900 and Y: 380-430.
-        rand_val = (30, 25) if cx == 870 and cy == 405 else 10
+        rand_val = (30, 25) if base_cx == 870 and base_cy == 405 else 10
         mx, my = window_to_monitor((cx, cy))
         Mouse.move(mx, my, randomize=rand_val)
         Mouse.click("left")

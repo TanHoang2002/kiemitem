@@ -69,7 +69,7 @@ class Dispatcher:
                 move_to_failed(capture_id, json_path, image_paths, self._config.failed_dir)
                 return
         else:
-            account_id = self._accounts[0] if self._accounts else STASH_ACCOUNT_FALLBACK
+            account_id = payload.get("account_id") or (self._accounts[0] if self._accounts else STASH_ACCOUNT_FALLBACK)
 
         self._send_or_retry(capture_id, json_path, image_paths, payload, account_id)
 

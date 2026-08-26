@@ -98,7 +98,7 @@ def _dedup_items(items: list) -> list:
     return unique
 
 
-def write_capture(bundle: CaptureBundle) -> Path | None:
+def write_capture(bundle: CaptureBundle, account_id: str | None = None) -> Path | None:
     """Persist bundle to ``pending/`` with a FIXED filename (overwrites previous)."""
     if not bundle.items:
         LOGGER.warning("write_capture called with empty bundle; skipping")
@@ -130,6 +130,8 @@ def write_capture(bundle: CaptureBundle) -> Path | None:
             _write_image(captured.image, pending / captured.image_file)
 
         payload = build_payload(bundle, meta)
+        if account_id:
+            payload["account_id"] = account_id
         _write_json_atomic(payload, json_path)
     except Exception:
         LOGGER.exception("Failed to write capture %s", meta.capture_id)

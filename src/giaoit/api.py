@@ -25,15 +25,20 @@ class LocalApiHandler(BaseHTTPRequestHandler):
             self._send_json(500, {"ok": False, "error": "Handler not initialized"})
             return
 
-        path = self.path.rstrip("/")
+        from urllib.parse import urlparse, parse_qs
+        parsed_url = urlparse(self.path)
+        path = parsed_url.path.rstrip("/")
+        query = parse_qs(parsed_url.query)
+        account_id = query.get("account_id", [None])[0]
+
         if path == "/trigger/f6":
-            LOGGER.info("Local API: Triggering F6 (capture_currency)")
-            self.handler_instance.capture_currency()
-            self._send_json(200, {"ok": True, "triggered": "F6"})
+            LOGGER.info("Local API: Triggering F6 (capture_currency) for account_id=%s", account_id)
+            self.handler_instance.capture_currency(account_id=account_id)
+            self._send_json(200, {"ok": True, "triggered": "F6", "account_id": account_id})
         elif path == "/trigger/f4":
-            LOGGER.info("Local API: Triggering F4 (capture_stash_full)")
-            self.handler_instance.capture_stash_full()
-            self._send_json(200, {"ok": True, "triggered": "F4"})
+            LOGGER.info("Local API: Triggering F4 (capture_stash_full) for account_id=%s", account_id)
+            self.handler_instance.capture_stash_full(account_id=account_id)
+            self._send_json(200, {"ok": True, "triggered": "F4", "account_id": account_id})
         elif path == "/trigger/f5":
             LOGGER.info("Local API: Triggering F5 (trigger_affix_search)")
             self.handler_instance.trigger_affix_search()
