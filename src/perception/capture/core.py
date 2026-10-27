@@ -122,8 +122,17 @@ class Cam:
                 LOGGER.debug("Found window, continue grabbing")
                 waiting_for_window = False
 
-            with mss.mss() as sct:
-                img = np.array(sct.grab(window_roi))
+            try:
+                from src.automation.window.backend_windows import ensure_interactive_desktop
+                ensure_interactive_desktop()
+            except Exception:
+                pass
+            try:
+                with mss.mss() as sct:
+                    img = np.array(sct.grab(window_roi))
+            except Exception as grab_err:
+                time.sleep(0.1)
+                continue
             with cached_img_lock:
                 if not self.window_offset_set or self._window_generation != generation:
                     continue

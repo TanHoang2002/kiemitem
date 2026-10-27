@@ -47,9 +47,9 @@ def _extract_currencies(payload: dict[str, Any]) -> dict[str, int]:
                 "other",
             )
             counts[f"Grand {gem_type.capitalize()}"] += quantity
-        elif ("flawless" in orig_name and "horadric" in orig_name) or ("flawless" in name and "horadric" in name):
+        elif "flawless" in orig_name or "flawless" in name:
             gem_type = next(
-                (g for g in ["skull", "ruby", "sapphire", "topaz", "emerald", "diamond", "amethyst"] if g in orig_name),
+                (g for g in ["skull", "ruby", "sapphire", "topaz", "emerald", "diamond", "amethyst"] if (g in orig_name or g in name)),
                 "other",
             )
             counts[f"Flawless {gem_type.capitalize()}"] += quantity
@@ -116,14 +116,14 @@ class Storage:
                 if existing_by_hash_id is not None and existing_by_hash_id in self._records:
                     return self._records[existing_by_hash_id], False, True
 
-            # If kind is stash, compute differences from the latest stash of the same account_id
-            if payload.get("kind") == "stash":
+            # If kind is stash or currency, compute differences from the latest stash of the same account_id
+            if payload.get("kind") in ("stash", "currency"):
                 new_counts = _extract_currencies(payload)
 
                 # Find the latest stash record for this account_id
                 latest_stash = None
                 for rec in self._records.values():
-                    if rec.get("kind") == "stash" and rec.get("account_id") == account_id:
+                    if rec.get("kind") in ("stash", "currency") and rec.get("account_id") == account_id:
                         if latest_stash is None or rec.get("received_at", "") > latest_stash.get("received_at", ""):
                             latest_stash = rec
 

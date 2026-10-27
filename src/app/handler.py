@@ -55,6 +55,11 @@ class ScriptHandler:
         self._config = get_settings()
         self._win_spec = WindowSpec(self._config.advanced_options.process_name)
         self._language = self._config.general.language
+        try:
+            from src.giaoit.api import start_local_api
+            start_local_api(self)
+        except Exception:
+            LOGGER.exception("Failed to start local API server")
         self.vision_mode: VisionMode = self._create_vision_mode(self._config.general.vision_mode_type)
 
         # Initialize Info Overlay hooks and subscriptions
@@ -386,7 +391,7 @@ class ScriptHandler:
 
         self._start_or_stop_loot_interaction_thread(run_capture_single, ())
 
-    def capture_stash_full(self, account_id: str | None = None):
+    def capture_stash_full(self, account_id: str | None = None, request_id: str | None = None):
         """GiaoIT V1 — F4: read every item in stash/inventory and write a bundle.
 
         Toggle behaviour: pressing F4 again while a scan is running cancels it
@@ -416,7 +421,7 @@ class ScriptHandler:
             return
         from src.giaoit.runner import run_capture_stash
 
-        self._start_or_stop_loot_interaction_thread(run_capture_stash, (account_id,))
+        self._start_or_stop_loot_interaction_thread(run_capture_stash, (account_id, request_id))
 
     def capture_currency(self, account_id: str | None = None):
         """GiaoIT — F6: read every item in stash/inventory, write a bundle, and print currency counts.

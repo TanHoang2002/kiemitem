@@ -14,7 +14,7 @@ class Stash(InventoryBase):
         super().__init__(5, 10, is_stash=True)
         self.menu_name = "Stash"
         self.is_open_search_args = SearchArgs(
-            ref=["stash_menu_icon", "stash_menu_icon_medium"], threshold=0.8, roi="stash_menu_icon", use_grayscale=True
+            ref=["stash_menu_icon", "stash_menu_icon_medium"], threshold=0.6, roi="stash_menu_icon", use_grayscale=True
         )
         self.curr_tab = 0
 

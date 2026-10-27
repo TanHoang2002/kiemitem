@@ -65,7 +65,7 @@ _TOOLTIP_STABLE_HIST_THRESHOLD = 0.90
 _TOOLTIP_STABLE_DELAY_SECONDS = 0.15
 
 
-def _item_signature(item) -> tuple:
+def _item_signature(item) -> tuple[object, ...]:
     """Stable identity for an Item — excludes object identity so repeated reads
     of the same logical item produce the same signature.
     """
@@ -81,7 +81,7 @@ def _snapshot_tts_lines() -> tuple[str, ...]:
         return ()
 
 
-def _wait_for_tts_update(pre_hover_version: int, slot_center: tuple[int, int], previous_signature: tuple | None):
+def _wait_for_tts_update(pre_hover_version: int, slot_center: tuple[int, int], previous_signature: tuple[object, ...] | None):
     """Wait until the TTS publisher flushes a fresh item (``latest_item_version``
     bumps past ``pre_hover_version``), or skip/timeout.
 
@@ -358,7 +358,7 @@ def _content_aware_fallback_crop(img, anchor: tuple[int, int], item_descr=None):
         return None, None
 
 
-def _read_one(inventory, item_slot, previous_signature: tuple | None) -> CapturedItem | None:
+def _read_one(inventory, item_slot, previous_signature: tuple[object, ...] | None) -> CapturedItem | None:
     """Hover one slot via ``inventory.hover_item_with_delay`` and read its item + image.
 
     Order of operations (matters for image quality):
@@ -377,8 +377,28 @@ def _read_one(inventory, item_slot, previous_signature: tuple | None) -> Capture
     item_descr, status = _wait_for_tts_update(pre_hover_version, item_slot.center, previous_signature)
 
     if item_descr is None:
-        # skip or timeout — don't write a record, don't update previous_signature
-        return None
+        if status == "timeout":
+            LOGGER.debug("TTS timeout at %s. Jiggling pointer to force TTS update for identical items.", item_slot.center)
+            try:
+                from src.automation import move_pointer
+                from src.perception import abs_window_to_monitor
+                
+                # Move to origin to clear game's hover state
+                move_pointer(*abs_window_to_monitor((0, 0)))
+                time.sleep(0.05)
+                
+                # Re-hover the item
+                pre_hover_version2 = latest_item_version()
+                inventory.hover_item_with_delay(item_slot)
+                time.sleep(get_settings().general.scan_post_hover_sleep)
+                
+                item_descr, status = _wait_for_tts_update(pre_hover_version2, item_slot.center, previous_signature)
+            except Exception as e:
+                LOGGER.debug("Jiggle fallback failed: %s", e)
+
+        if item_descr is None:
+            # skip or timeout — don't write a record, don't update previous_signature
+            return None
     # Note: TemperManual check happens in _scan_slots so the previous_signature
     # is still updated correctly even when this slot is skipped.
 
@@ -432,7 +452,7 @@ def _scan_slots(inventory, slots, captured: list[CapturedItem]) -> bool:
     user has not marked the item. For GiaoIT we want to capture everything in
     the slot regardless of in-game status, so we hover every occupied slot.
     """
-    previous_signature: tuple | None = None
+    previous_signature: tuple[object, ...] | None = None
     for index, slot in enumerate(slots):
         if _is_cancelled():
             return False
@@ -473,16 +493,65 @@ def read_full_stash() -> CaptureBundle | None:
     stash = stash_inventory()
     inv = character_inventory()
     config = get_settings().general
-    adv_config = get_settings().advanced_options
+    adv_config = getattr(get_settings(), "advanced_options", None)
+    stash_chest_coords = getattr(adv_config, "stash_chest_coordinates", None) if adv_config else None
 
     captured: list[CapturedItem] = []
     tabs_scanned: list[int] = []
 
     stash_open = stash.is_open()
-    if not stash_open and adv_config.stash_chest_coordinates is not None:
-        cx, cy = adv_config.stash_chest_coordinates
+    if not stash_open:
+
+        LOGGER.info("Stash closed. Searching for chest visually...")
+
+        try:
+
+            from src.perception.capture.core import Cam
+
+            from src.perception import search
+
+            from src.automation.mouse import Mouse
+
+            from src.perception import window_to_monitor
+
+            
+
+            img = Cam().grab()
+
+            import cv2
+            import os
+            template_path = os.path.join("assets", "templates", "chest_template.png")
+            template_img = cv2.imread(template_path)
+            if template_img is not None:
+                res = search(ref=template_img, inp_img=img, threshold=0.65, use_grayscale=True)
+                if res.success and len(res.matches) > 0:
+                    cx, cy = res.matches[0].center
+
+                LOGGER.info("Visually found chest at (%d, %d)", cx, cy)
+
+                mx, my = window_to_monitor((cx, cy))
+
+                Mouse.move(mx, my, randomize=15)
+
+                Mouse.click("left")
+
+                stash_open = stash.wait_until_open(timeout=3.0)
+
+                if not stash_open:
+
+                    LOGGER.warning("Clicking visually found chest did not open stash UI")
+
+        except Exception as e:
+
+            LOGGER.debug("Visual chest search failed (maybe missing assets/chest_template.png?): %s", e)
+
+    
+
+    if not stash_open and stash_chest_coords is not None:
+        cx, cy = stash_chest_coords
         base_cx, base_cy = cx, cy
         from src.settings import get_ui_coordinates
+
         win_w, win_h = get_ui_coordinates().pos.window_dimensions
         if win_w > 0 and win_h > 0 and (win_w != 1920 or win_h != 1080):
             cx = int(cx * win_w / 1920)
@@ -497,10 +566,9 @@ def read_full_stash() -> CaptureBundle | None:
         mx, my = window_to_monitor((cx, cy))
         Mouse.move(mx, my, randomize=rand_val)
         Mouse.click("left")
-        time.sleep(1.0)
-        stash_open = stash.is_open()
+        stash_open = stash.wait_until_open(timeout=3.0)
         if not stash_open:
-            LOGGER.warning("Clicking stash chest did not open stash UI")
+            LOGGER.warning("Clicking stash chest did not open stash UI within 3 seconds")
 
     cancelled = False
 
@@ -762,10 +830,58 @@ def search_and_mark(search_params, callback=None) -> list:
 
     stash_open = stash.is_open()
     adv_config = get_settings().advanced_options
+    if not stash_open:
+
+        LOGGER.info("Stash closed. Searching for chest visually...")
+
+        try:
+
+            from src.perception.capture.core import Cam
+
+            from src.perception import search
+
+            from src.automation.mouse import Mouse
+
+            from src.perception import window_to_monitor
+
+            
+
+            img = Cam().grab()
+
+            import cv2
+            import os
+            template_path = os.path.join("assets", "templates", "chest_template.png")
+            template_img = cv2.imread(template_path)
+            if template_img is not None:
+                res = search(ref=template_img, inp_img=img, threshold=0.65, use_grayscale=True)
+                if res.success and len(res.matches) > 0:
+                    cx, cy = res.matches[0].center
+
+                LOGGER.info("Visually found chest at (%d, %d)", cx, cy)
+
+                mx, my = window_to_monitor((cx, cy))
+
+                Mouse.move(mx, my, randomize=15)
+
+                Mouse.click("left")
+
+                stash_open = stash.wait_until_open(timeout=3.0)
+
+                if not stash_open:
+
+                    LOGGER.warning("Clicking visually found chest did not open stash UI")
+
+        except Exception as e:
+
+            LOGGER.debug("Visual chest search failed (maybe missing assets/chest_template.png?): %s", e)
+
+    
+
     if not stash_open and adv_config.stash_chest_coordinates is not None:
         cx, cy = adv_config.stash_chest_coordinates
         base_cx, base_cy = cx, cy
         from src.settings import get_ui_coordinates
+
         win_w, win_h = get_ui_coordinates().pos.window_dimensions
         if win_w > 0 and win_h > 0 and (win_w != 1920 or win_h != 1080):
             cx = int(cx * win_w / 1920)

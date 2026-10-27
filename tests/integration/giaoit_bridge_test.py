@@ -36,6 +36,7 @@ def iso_env(tmp_path, monkeypatch):
     importlib.reload(bridge_dispatcher)
     importlib.reload(bridge_watcher)
     importlib.reload(bridge_retry_queue)
+    monkeypatch.setattr(bridge_accounts, "DEFAULT_ACCOUNTS_FILE", tmp_path / "accounts.txt")
     cfg = bridge_config.load_config()
     for path in (cfg.pending_dir, cfg.sent_dir, cfg.failed_dir, cfg.received_dir, cfg.logs_dir, cfg.state_dir):
         path.mkdir(parents=True, exist_ok=True)
@@ -54,7 +55,7 @@ def client(iso_env, monkeypatch):
     # bridge doesn't try to open a real HTTP connection to http://testserver.
     from bridge import sender as bridge_sender
 
-    def _fake_send(receiver_url, payload, image_paths, account_id, timeout_seconds=30.0):
+    def _fake_send(receiver_url, payload, image_paths, account_id, timeout_seconds=30.0, api_key=None):
         import json as _json
 
         files = []
@@ -62,7 +63,10 @@ def client(iso_env, monkeypatch):
             if path.exists():
                 files.append(("images", (path.name, path.read_bytes(), "image/png")))
         data = {"payload": _json.dumps(payload, ensure_ascii=False), "account_id": account_id}
-        response = test_client.post("/items", data=data, files=files)
+        headers = {}
+        if api_key:
+            headers["X-API-Key"] = api_key
+        response = test_client.post("/items", data=data, files=files, headers=headers)
         if response.status_code in (200, 201):
             body = response.json()
             return bridge_sender.SendResult(
@@ -202,7 +206,7 @@ def test_receiver_5xx_triggers_retry(iso_env, monkeypatch) -> None:
         confirm_fn=lambda payload, images: "acc1",
     )
 
-    def _fake_send(receiver_url, payload, image_paths, account_id, timeout_seconds=30.0):
+    def _fake_send(receiver_url, payload, image_paths, account_id, timeout_seconds=30.0, api_key=None):
         from bridge.sender import SendResult
 
         return SendResult(ok=False, deduped=False, retryable=True, status_code=503, error="unavailable")
@@ -227,7 +231,7 @@ def test_receiver_4xx_moves_to_failed(iso_env, monkeypatch) -> None:
         confirm_fn=lambda payload, images: "acc1",
     )
 
-    def _fake_send(receiver_url, payload, image_paths, account_id, timeout_seconds=30.0):
+    def _fake_send(receiver_url, payload, image_paths, account_id, timeout_seconds=30.0, api_key=None):
         from bridge.sender import SendResult
 
         return SendResult(ok=False, deduped=False, retryable=False, status_code=400, error="bad payload")

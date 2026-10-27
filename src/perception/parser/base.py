@@ -186,6 +186,12 @@ def _add_sigil_affixes_from_tts(tts_section: list[str], item: Item) -> Item:
 
 def _create_base_item_from_tts(tts_item: list[str]) -> Item | None:
     item = Item(original_name=tts_item[0])
+    
+    # Extract quantity from parentheses: e.g., "Corrupted Roots (9724)" -> 9724
+    match = re.search(r"\((\d+)\)", tts_item[0])
+    if match:
+        item.quantity = int(match.group(1))
+
     if tts_item[1].endswith(ItemIdentifiers.COMPASS.value):
         return _update_item_object(item, rarity=ItemRarity.Common, item_type=ItemType.Compass)
     if ItemIdentifiers.NIGHTMARE_SIGIL.value.upper() in tts_item[0].upper():

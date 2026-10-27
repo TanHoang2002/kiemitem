@@ -7,7 +7,7 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
-DEFAULT_RECEIVER_URL = "http://192.168.2.115:8000"
+DEFAULT_RECEIVER_URL = "http://192.168.2.115/api/method/gege_custom.gege_custom.api.inventory.update_bot_inventory"
 DEFAULT_CAPTURE_DIR = Path.home() / ".giaoit"
 DEFAULT_POLL_INTERVAL_SECONDS = 0.5
 DEFAULT_STABILITY_SECONDS = 0.3
@@ -20,6 +20,7 @@ DEFAULT_LOG_LEVEL = "INFO"
 @dataclass(frozen=True)
 class BridgeConfig:
     receiver_url: str
+    api_key: str
     capture_dir: Path
     poll_interval_seconds: float
     stability_seconds: float
@@ -60,6 +61,7 @@ class BridgeConfig:
 def load_config() -> BridgeConfig:
     return BridgeConfig(
         receiver_url=os.environ.get("GIAOIT_RECEIVER_URL", DEFAULT_RECEIVER_URL).rstrip("/"),
+        api_key=os.environ.get("GIAOIT_API_KEY", "giaoit_key_7b9d1e4c8f0a2d5e"),
         capture_dir=Path(os.environ.get("GIAOIT_CAPTURE_DIR", str(DEFAULT_CAPTURE_DIR))).expanduser(),
         poll_interval_seconds=float(os.environ.get("GIAOIT_POLL_INTERVAL", DEFAULT_POLL_INTERVAL_SECONDS)),
         stability_seconds=float(os.environ.get("GIAOIT_STABILITY_SECONDS", DEFAULT_STABILITY_SECONDS)),

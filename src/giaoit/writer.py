@@ -23,7 +23,7 @@ from src.giaoit.paths import pending_dir
 
 LOGGER = logging.getLogger(__name__)
 
-_FIXED_NAMES = {"single": "latest_single", "stash": "latest_stash"}
+_FIXED_NAMES = {"single": "latest_single", "stash": "latest_stash", "currency": "latest_currency"}
 
 
 def _new_meta(fixed_id: str) -> CaptureMeta:
@@ -98,7 +98,24 @@ def _dedup_items(items: list) -> list:
     return unique
 
 
-def write_capture(bundle: CaptureBundle, account_id: str | None = None) -> Path | None:
+def _is_currency_item(item) -> bool:
+    orig_name = str(item.original_name or "").lower()
+    name = str(item.name or "").lower()
+
+    if "lair" in orig_name or "lair" in name:
+        return True
+    if "root" in orig_name or "root" in name:
+        return True
+    if "crux" in orig_name or "crux" in name:
+        return True
+    if "grand" in orig_name or "grand" in name:
+        return True
+    if ("flawless" in orig_name and "horadric" in orig_name) or ("flawless" in name and "horadric" in name):
+        return True
+    return False
+
+
+def write_capture(bundle: CaptureBundle, account_id: str | None = None, request_id: str | None = None) -> Path | None:
     """Persist bundle to ``pending/`` with a FIXED filename (overwrites previous)."""
     if not bundle.items:
         LOGGER.warning("write_capture called with empty bundle; skipping")
@@ -106,6 +123,12 @@ def write_capture(bundle: CaptureBundle, account_id: str | None = None) -> Path 
 
     # Dedup: remove items with identical content (same affixes, power, type, ...)
     bundle.items = _dedup_items(bundle.items)
+
+    # Strip images for currency items to prevent unnecessary image transmission
+    for captured in bundle.items:
+        if _is_currency_item(captured.item):
+            captured.image = None
+            captured.image_file = None
 
     if not bundle.items:
         LOGGER.warning("All items were duplicates; nothing to write")
@@ -132,6 +155,8 @@ def write_capture(bundle: CaptureBundle, account_id: str | None = None) -> Path 
         payload = build_payload(bundle, meta)
         if account_id:
             payload["account_id"] = account_id
+        if request_id:
+            payload["request_id"] = request_id
         _write_json_atomic(payload, json_path)
     except Exception:
         LOGGER.exception("Failed to write capture %s", meta.capture_id)

@@ -99,6 +99,7 @@ class ItemJSONEncoder(json.JSONEncoder):
                 "is_ancestral": o.is_ancestral,
                 "item_type": o.item_type.value if o.item_type else None,
                 "name": o.name or None,
+                "original_name": o.original_name or None,
                 "power": o.power or None,
                 "rarity": o.rarity.value if o.rarity else None,
                 "set_name": o.set or None,

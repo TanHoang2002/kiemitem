@@ -12,7 +12,7 @@ import time
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Query, UploadFile
 from fastapi.responses import JSONResponse
 
 from receiver.storage import Storage, get_store
@@ -20,7 +20,41 @@ from receiver.storage import Storage, get_store
 SCHEMA = "giaoit.capture.v1"
 START_TIME = time.monotonic()
 
+
+import os
+
+GIAOIT_API_KEY = os.environ.get("GIAOIT_API_KEY", "giaoit_key_7b9d1e4c8f0a2d5e")
+
+
+def verify_api_key(x_api_key: str = Header(None), api_key: str = Query(None)):
+    key = x_api_key or api_key
+    if not key or key != GIAOIT_API_KEY:
+        raise HTTPException(status_code=403, detail="Forbidden: Invalid or missing API key")
+
+
 app = FastAPI(title="GiaoIT V1 Receiver Stub", version="0.1.0")
+
+PENDING_SCANS = {}
+
+
+@app.post("/scan", dependencies=[Depends(verify_api_key)])
+async def receive_scan_trigger(data: dict = None) -> dict[str, object]:
+    """Called by ERP to trigger bot scan on client machine."""
+    if not data:
+        return {"status": "error", "message": "Missing payload"}
+    game_account = data.get("game_account")
+    request_id = data.get("request_id")
+    if game_account:
+        PENDING_SCANS[game_account] = request_id
+        import httpx
+
+        async with httpx.AsyncClient() as client:
+            try:
+                # Trigger scan locally on the client bot (F6 for currency/inventory scan)
+                await client.post(f"http://localhost:18080/trigger/f6?account_id={game_account}", timeout=5)
+            except Exception:
+                pass
+    return {"status": "ok"}
 
 
 def _storage() -> Storage:
@@ -37,7 +71,7 @@ def stats() -> dict[str, object]:
     return {"records": _storage().count()}
 
 
-@app.post("/items")
+@app.post("/items", dependencies=[Depends(verify_api_key)])
 async def post_items(
     payload: Annotated[str, Form()],
     account_id: Annotated[str, Form()],
@@ -65,6 +99,31 @@ async def post_items(
 
     deduped = deduped_by_id or deduped_by_hash
     status_code = 200 if deduped else 201
+
+    # Forward/post to ERP after database persistence
+    request_id = PENDING_SCANS.pop(account_id, None)
+
+    from receiver.storage import _extract_currencies
+
+    counts = _extract_currencies(parsed)
+    mapped_items = [{"currency_item": ci, "quantity": qty} for ci, qty in counts.items()]
+
+    import httpx
+
+    # Forward payload to the ERP server
+    erp_url = "http://192.168.2.115/api/method/gege_custom.gege_custom.api.inventory.update_bot_inventory"
+    headers = {"X-API-Key": GIAOIT_API_KEY, "Content-Type": "application/json"}
+    payload_to_erp = {"game_account": account_id, "items": mapped_items}
+    if request_id:
+        payload_to_erp["request_id"] = request_id
+
+    async with httpx.AsyncClient() as client:
+        try:
+            res = await client.post(erp_url, json=payload_to_erp, headers=headers, timeout=10)
+            print(f"ERP API Response: {res.status_code} - {res.text}")
+        except Exception as e:
+            print(f"ERP API Error: {e}")
+
     return JSONResponse(
         status_code=status_code,
         content={
@@ -99,7 +158,7 @@ def get_warehouse_summary() -> dict[str, Any]:
     latest_records = {}
     with storage._lock:
         for record in storage._records.values():
-            if record.get("kind") != "stash":
+            if record.get("kind") not in ("stash", "currency"):
                 continue
             acc_id = record.get("account_id")
             if not acc_id:
@@ -176,7 +235,7 @@ def get_warehouse_summary() -> dict[str, Any]:
     return summary
 
 
-@app.get("/warehouse/history")
+@app.get("/warehouse/history", dependencies=[Depends(verify_api_key)])
 def get_warehouse_history() -> list[dict[str, Any]]:
     """Get the transaction history list of warehouse updates."""
     return _storage().get_history()

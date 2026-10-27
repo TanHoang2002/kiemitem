@@ -54,7 +54,7 @@ class Dispatcher:
 
         capture_id = payload.get("capture_id")
         kind = payload.get("kind")
-        if not isinstance(capture_id, str) or kind not in {"single", "stash"}:
+        if not isinstance(capture_id, str) or kind not in {"single", "stash", "currency"}:
             LOGGER.error("invalid payload at %s (capture_id=%r kind=%r)", json_path, capture_id, kind)
             move_to_failed(json_path.stem, json_path, [], self._config.failed_dir)
             return
@@ -97,7 +97,9 @@ class Dispatcher:
     def _send_or_retry(
         self, capture_id: str, json_path: Path, image_paths: list[Path], payload: dict[str, Any], account_id: str
     ) -> None:
-        result: SendResult = send_payload(self._config.receiver_url, payload, image_paths, account_id)
+        result: SendResult = send_payload(
+            self._config.receiver_url, payload, image_paths, account_id, api_key=self._config.api_key
+        )
         if result.ok:
             LOGGER.info("capture %s sent (deduped=%s status=%s)", capture_id, result.deduped, result.status_code)
             self._retry_queue.remove(capture_id)

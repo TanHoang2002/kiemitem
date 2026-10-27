@@ -21,7 +21,20 @@ DETECTION_WINDOW_FLAG = True
 DETECT_WINDOW_THREAD: threading.Thread | None = None
 
 
+def ensure_interactive_desktop():
+    try:
+        user32 = ctypes.windll.user32
+        hinput = user32.OpenInputDesktop(0, False, 0x01FF)
+        if not hinput:
+            hinput = user32.OpenDesktopW("Default", 0, False, 0x01FF)
+        if hinput:
+            user32.SetThreadDesktop(hinput)
+    except Exception:
+        pass
+
+
 def list_active_window_ids() -> list[int]:
+    ensure_interactive_desktop()
     window_list = []
     EnumWindows(lambda win, list_of_win: list_of_win.append(win), window_list)
     return window_list
@@ -63,6 +76,7 @@ def start_detecting_window(window_spec: WindowSpecLike) -> None:
 
 
 def detect_window(window_spec: WindowSpecLike) -> None:
+    ensure_interactive_desktop()
     global DETECTION_WINDOW_FLAG
     while DETECTION_WINDOW_FLAG:
         find_and_set_window_position(window_spec)

@@ -100,6 +100,6 @@ def build_payload(bundle: CaptureBundle, meta: CaptureMeta) -> dict[str, object]
     }
     if bundle.kind == "single":
         payload["item_hash"] = bundle_hash(bundle)
-    if bundle.kind == "stash":
+    if bundle.kind in ("stash", "currency"):
         payload["stash_info"] = {"tabs_scanned": list(bundle.stash_tabs_scanned)}
     return payload

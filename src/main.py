@@ -44,6 +44,12 @@ if sys.platform == "win32":
 
 def main() -> None:
     """Prepare application state and run the configured backend."""
+    if sys.platform == "win32":
+        try:
+            from src.automation.window.backend_windows import ensure_interactive_desktop
+            ensure_interactive_desktop()
+        except Exception:
+            pass
     if sys.platform != "win32":
         LOGGER.info("Running in GUI-only mode on non-Windows. Runtime backend (TTS/automation) is disabled.")
         return

@@ -54,9 +54,12 @@ class BackendWorker(QObject):
             time.sleep(0.2)
         time.sleep(0.5)
 
-        self.script_handler = ScriptHandler()
-        check_for_proper_tts_configuration()
-        Overlay().run()
+        try:
+            self.script_handler = ScriptHandler()
+            check_for_proper_tts_configuration()
+            Overlay().run()
+        except Exception:
+            LOGGER.exception("Error in backend worker run")
         self.finished.emit()
 
 

@@ -29,7 +29,7 @@ def run_capture_single() -> None:
     write_capture(bundle)
 
 
-def run_capture_stash(account_id: str | None = None) -> None:
+def run_capture_stash(account_id: str | None = None, request_id: str | None = None) -> None:
     """F4: read every item in the open stash tabs."""
     if not is_capture_enabled():
         LOGGER.info("GiaoIT capture_stash pressed but capture_mode is disabled; ignoring")
@@ -40,7 +40,7 @@ def run_capture_stash(account_id: str | None = None) -> None:
         LOGGER.warning("GiaoIT capture_stash produced no bundle")
         return
 
-    write_capture(bundle, account_id=account_id)
+    write_capture(bundle, account_id=account_id, request_id=request_id)
 
 
 def run_capture_currency(account_id: str | None = None) -> None:
@@ -54,28 +54,29 @@ def run_capture_currency(account_id: str | None = None) -> None:
         LOGGER.warning("GiaoIT capture_currency produced no bundle")
         return
 
-    json_path = write_capture(bundle, account_id=account_id)
-    if json_path is None:
-        return
-
+    # For currency scans, we compute the counts FIRST and replace the bundle items
+    # with synthetic items representing all known currency types (including 0s).
+    # This forces the Web Server to overwrite old quantities with 0 if an item is missing.
     try:
         import re
         from collections import Counter
+        from src.item.models import Item
+        from src.giaoit.models import CapturedItem
 
         counts = Counter()
         for captured in bundle.items:
             item = captured.item
             orig_name = str(item.original_name or "").lower()
             name = str(item.name or "").lower()
-
-            # Extract stack size from parentheses: e.g., "GREATER LAIR KEY (1000)" -> 1000
-            match = re.search(r"\((\d+)\)", orig_name)
-            quantity = int(match.group(1)) if match else 1
+            quantity = getattr(item, "quantity", 1)
 
             # 1. Greater Lair Key
             if "greater lair" in orig_name or "greater lair" in name:
                 counts["Greater Lair Key"] += quantity
-            # 2. Lair Key
+            # 2. Superior Lair Key (must be before Lair Key)
+            elif "superior" in orig_name or "superior" in name:
+                counts["Superior Lair Key"] += quantity
+            # 3. Lair Key
             elif "lair" in orig_name or "lair" in name:
                 if (
                     "greater" not in orig_name
@@ -84,9 +85,6 @@ def run_capture_currency(account_id: str | None = None) -> None:
                     and "superior" not in name
                 ):
                     counts["Lair Key"] += quantity
-            # 3. Superior Lair Key
-            elif "superior" in orig_name or "superior" in name:
-                counts["Superior Lair Key"] += quantity
             # 4. Corrupted Roots
             elif "root" in orig_name or "root" in name:
                 counts["Corrupted Roots"] += quantity
@@ -126,10 +124,6 @@ def run_capture_currency(account_id: str | None = None) -> None:
                 elif "amethyst" in orig_name or "amethyst" in name:
                     counts["Flawless Amethyst"] += quantity
 
-        LOGGER.info("=" * 50)
-        LOGGER.info("📊 THỐNG KÊ SỐ LƯỢNG CURRENCY (F6):")
-        LOGGER.info("=" * 50)
-
         display_keys = [
             "Greater Lair Key",
             "Lair Key",
@@ -152,12 +146,55 @@ def run_capture_currency(account_id: str | None = None) -> None:
             "Flawless Amethyst",
         ]
 
-        for key in display_keys:
+        LOGGER.info("=" * 50)
+        LOGGER.info("📊 THỐNG KÊ SỐ LƯỢNG CURRENCY (F6):")
+        LOGGER.info("=" * 50)
+
+        from src.game_data import ItemType, ItemRarity
+        # Added keys as requested by the user
+        supported_keys = [
+            "Corrupted Roots",
+            "Lair Key", "Greater Lair Key", "Superior Lair Key",
+            "Crux of the False Prophet",
+            "Grand Skull", "Grand Ruby", "Grand Sapphire", "Grand Topaz", "Grand Emerald", "Grand Diamond", "Grand Amethyst",
+            "Flawless Skull", "Flawless Ruby", "Flawless Sapphire", "Flawless Topaz", "Flawless Emerald", "Flawless Diamond", "Flawless Amethyst"
+        ]
+
+        synthetic_items = []
+        for key in supported_keys:
             count = counts.get(key, 0)
             LOGGER.info(f"🔹 {key:40}: {count:5d}")
+            
+            # The server seems to expect the raw TTS string which is often uppercase
+            # And it expects "D4 Flawless Horadric Diamond" format for Flawless gems
+            send_name = key
+            if "Flawless" in key:
+                send_name = key.replace("Flawless", "D4 Flawless Horadric")
+            
+            orig_name = f"{send_name} ({count})".upper()
+            
+            synth_item = Item(
+                name=None, 
+                original_name=orig_name,
+                item_type=ItemType.Consumable,
+                rarity=ItemRarity.Rare
+            )
+            # Add dynamic quantity so getattr(item, 'quantity', 1) still works if needed downstream
+            synth_item.quantity = count
+            synthetic_items.append(CapturedItem(item=synth_item, image=None, image_file=None))
 
         LOGGER.info("-" * 50)
-        LOGGER.info(f"Tổng số ô vật phẩm đã quét: {len(bundle.items)}")
+        LOGGER.info(f"Tổng số nguyên liệu gửi lên Server (Gems & Roots): {len(synthetic_items)}")
         LOGGER.info("=" * 50)
+
+        # Replace the bundle's raw items with our clean, counted list
+        bundle.items = synthetic_items
+
     except Exception:
         LOGGER.exception("Failed to compute currency statistics")
+
+    bundle.kind = "currency"
+    json_path = write_capture(bundle, account_id=account_id, request_id=request_id)
+    if json_path is None:
+        return
+

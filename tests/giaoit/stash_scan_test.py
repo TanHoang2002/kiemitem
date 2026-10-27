@@ -147,6 +147,13 @@ def test_read_full_stash_falls_back_to_inventory(monkeypatch, tmp_path) -> None:
 
     monkeypatch.setattr(s, "stash_inventory", lambda: stash)
     monkeypatch.setattr(s, "character_inventory", lambda: inv)
+    monkeypatch.setattr(
+        s,
+        "get_settings",
+        lambda: SimpleNamespace(
+            general=_fake_general(), advanced_options=SimpleNamespace(stash_chest_coordinates=None)
+        ),
+    )
     monkeypatch.setattr(s.time, "sleep", lambda _s: None)
     monkeypatch.setattr(s, "capture", lambda *args, **kwargs: np.zeros((4, 4, 3), dtype=np.uint8))
 

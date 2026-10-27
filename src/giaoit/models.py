@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
     from src.item.models import Item
 
-CaptureKind = Literal["single", "stash"]
+CaptureKind = Literal["single", "stash", "currency"]
 CaptureSource = Literal["f2_key", "f4_key", "filter_check_items", "auto_scan"]
 
 
